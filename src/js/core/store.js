@@ -5,7 +5,7 @@ const DEFAULT_STATE = {
   drivers: [],
   lastQuote: null,
   adminUnlocked: false,
-  apiBaseUrl: 'https://chanfiou-convoyage-api.chanfiou.workers.dev',
+  apiBaseUrl: 'https://api.chanfiou-convoyage.fr',
 };
 
 const listeners = new Set();
