@@ -1,0 +1,282 @@
+import { randomToken, signSession, timingSafeEqual, verifyPassword, verifySession } from './crypto.js';
+import { transmitInvoiceToAbby } from './abby.js';
+import {
+  notifyClientStatusChange,
+  notifySubscriptions,
+  readPublicKey,
+  registerClientSubscription,
+  registerSubscription,
+  sendTestNotification,
+} from './push.js';
+
+const SESSION_DURATION_SECONDS = 60 * 60 * 24 * 30;
+const MAX_PAYLOAD_BYTES = 512 * 1024;
+const MAX_PAGE_SIZE = 200;
+
+const CLIENT_VISIBLE_FIELDS = [
+  'reference',
+  'status',
+  'departure',
+  'arrival',
+  'pickupDate',
+  'history',
+  'createdAt',
+  'updatedAt',
+];
+
+const json = (data, status = 200, extraHeaders = {}) =>
+  new Response(JSON.stringify(data), {
+    status,
+    headers: { 'content-type': 'application/json; charset=utf-8', ...extraHeaders },
+  });
+
+const fail = (status, message) => json({ error: message }, status);
+
+const corsHeaders = (request, env) => {
+  const allowed = String(env.ALLOWED_ORIGIN ?? '*');
+  const origin = request.headers.get('origin') ?? '';
+  const value = allowed === '*' ? '*' : allowed.split(',').map((entry) => entry.trim()).includes(origin) ? origin : '';
+  return {
+    'access-control-allow-origin': value || 'null',
+    'access-control-allow-headers': 'content-type, authorization',
+    'access-control-allow-methods': 'GET, POST, PATCH, OPTIONS',
+    'access-control-max-age': '86400',
+    vary: 'origin',
+  };
+};
+
+const readJson = async (request) => {
+  const raw = await request.text();
+  if (raw.length > MAX_PAYLOAD_BYTES) return { error: 'Contenu trop volumineux.' };
+  if (!raw) return { error: 'Contenu manquant.' };
+  try {
+    return { body: JSON.parse(raw) };
+  } catch {
+    return { error: 'Contenu illisible.' };
+  }
+};
+
+const operatorFrom = async (request, env) => {
+  const header = request.headers.get('authorization') ?? '';
+  if (!header.toLowerCase().startsWith('bearer ')) return null;
+  try {
+    return await verifySession(header.slice(7).trim(), env.SESSION_SECRET);
+  } catch {
+    return null;
+  }
+};
+
+const nextReference = async (env, createdAt) => {
+  const date = new Date(createdAt);
+  const period = `${String(date.getUTCFullYear()).slice(-2)}${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
+  await env.DB.prepare(
+    'INSERT INTO counters (period, last_sequence) VALUES (?1, 1) ' +
+      'ON CONFLICT(period) DO UPDATE SET last_sequence = last_sequence + 1',
+  )
+    .bind(period)
+    .run();
+  const row = await env.DB.prepare('SELECT last_sequence FROM counters WHERE period = ?1')
+    .bind(period)
+    .first();
+  return `CHF-${period}-${String(row.last_sequence).padStart(3, '0')}`;
+};
+
+const rowToMission = (row) => ({
+  ...JSON.parse(row.payload),
+  id: row.id,
+  reference: row.reference,
+  status: row.status,
+  origin: row.origin,
+  createdAt: row.created_at,
+  updatedAt: row.updated_at,
+});
+
+const publicView = (mission) =>
+  CLIENT_VISIBLE_FIELDS.reduce(
+    (accumulator, field) => (mission[field] === undefined ? accumulator : { ...accumulator, [field]: mission[field] }),
+    {},
+  );
+
+const createRequest = async (request, env, ctx) => {
+  const { body, error } = await readJson(request);
+  if (error) return fail(400, error);
+
+  const mission = body?.mission;
+  if (!mission?.departure || !mission?.arrival || !mission?.quote?.kilometers) {
+    return fail(422, 'Demande incomplète : trajet ou distance manquants.');
+  }
+
+  const now = new Date().toISOString();
+  const existing = mission.clientRequestId
+    ? await env.DB.prepare("SELECT * FROM missions WHERE json_extract(payload, '$.clientRequestId') = ?1")
+        .bind(mission.clientRequestId)
+        .first()
+    : null;
+
+  if (existing) {
+    return json({ reference: existing.reference, token: existing.client_token, duplicate: true });
+  }
+
+  const reference = await nextReference(env, now);
+  const token = randomToken();
+  const id = `srv-${crypto.randomUUID()}`;
+  const stored = {
+    ...mission,
+    reference,
+    status: 'demande',
+    history: [{ status: 'demande', at: now }],
+  };
+
+  await env.DB.prepare(
+    'INSERT INTO missions (id, reference, client_token, status, origin, created_at, updated_at, payload) ' +
+      'VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)',
+  )
+    .bind(id, reference, token, 'demande', 'client', now, now, JSON.stringify(stored))
+    .run();
+
+  ctx?.waitUntil(
+    notifySubscriptions(env, {
+      title: 'Nouvelle demande de convoyage',
+      body: `${reference} — ${mission.departure} vers ${mission.arrival}`,
+      url: './#/espace',
+    }),
+  );
+
+  return json({ reference, token, duplicate: false }, 201);
+};
+
+const readRequest = async (request, env, url) => {
+  const reference = url.pathname.split('/').pop();
+  const token = url.searchParams.get('token') ?? '';
+  const row = await env.DB.prepare('SELECT * FROM missions WHERE reference = ?1').bind(reference).first();
+  if (!row) return fail(404, 'Référence inconnue.');
+  if (!timingSafeEqual(token, row.client_token)) return fail(403, 'Jeton de suivi invalide.');
+  return json({ mission: publicView(rowToMission(row)) });
+};
+
+const openSession = async (request, env) => {
+  const { body, error } = await readJson(request);
+  if (error) return fail(400, error);
+
+  const email = String(body?.email ?? '').trim().toLowerCase();
+  const password = String(body?.password ?? '');
+  const expected = String(env.OPERATOR_EMAIL ?? '').trim().toLowerCase();
+
+  const emailMatches = expected.length > 0 && timingSafeEqual(email, expected);
+  const passwordMatches = await verifyPassword(password, env.OPERATOR_PASSWORD_HASH ?? '');
+
+  if (!emailMatches || !passwordMatches) {
+    return fail(401, 'Adresse ou mot de passe incorrect.');
+  }
+
+  const expiresAt = Math.floor(Date.now() / 1000) + SESSION_DURATION_SECONDS;
+  const token = await signSession({ sub: expected, exp: expiresAt }, env.SESSION_SECRET);
+  return json({ token, expiresAt });
+};
+
+const listMissions = async (request, env, url) => {
+  const since = url.searchParams.get('since');
+  const limit = Math.min(MAX_PAGE_SIZE, Number(url.searchParams.get('limit')) || MAX_PAGE_SIZE);
+  const statement = since
+    ? env.DB.prepare('SELECT * FROM missions WHERE updated_at > ?1 ORDER BY updated_at ASC LIMIT ?2').bind(since, limit)
+    : env.DB.prepare('SELECT * FROM missions ORDER BY updated_at ASC LIMIT ?1').bind(limit);
+  const { results } = await statement.all();
+  const missions = (results ?? []).map(rowToMission);
+  return json({
+    missions,
+    cursor: missions.length > 0 ? missions.at(-1).updatedAt : since ?? null,
+    hasMore: missions.length === limit,
+  });
+};
+
+const upsertMission = async (request, env, ctx) => {
+  const { body, error } = await readJson(request);
+  if (error) return fail(400, error);
+
+  const mission = body?.mission;
+  if (!mission?.reference || !mission?.status) return fail(422, 'Mission incomplète : référence ou statut manquants.');
+
+  const now = new Date().toISOString();
+  const existing = await env.DB.prepare('SELECT * FROM missions WHERE reference = ?1')
+    .bind(mission.reference)
+    .first();
+
+  if (existing && mission.updatedAt && existing.updated_at > mission.updatedAt) {
+    return json({ mission: rowToMission(existing), conflict: true }, 409);
+  }
+
+  const id = existing?.id ?? mission.id ?? `srv-${crypto.randomUUID()}`;
+  const token = existing?.client_token ?? randomToken();
+  const createdAt = existing?.created_at ?? mission.createdAt ?? now;
+  const stored = { ...mission, id, reference: mission.reference };
+
+  await env.DB.prepare(
+    'INSERT INTO missions (id, reference, client_token, status, origin, created_at, updated_at, payload) ' +
+      'VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8) ' +
+      'ON CONFLICT(reference) DO UPDATE SET status = ?4, updated_at = ?7, payload = ?8',
+  )
+    .bind(id, mission.reference, token, mission.status, existing?.origin ?? 'convoyeur', createdAt, now, JSON.stringify(stored))
+    .run();
+
+  if (existing && existing.status !== mission.status) {
+    ctx?.waitUntil(notifyClientStatusChange(env, mission.reference, mission.status));
+  }
+
+  const row = await env.DB.prepare('SELECT * FROM missions WHERE reference = ?1').bind(mission.reference).first();
+  return json({ mission: rowToMission(row) }, existing ? 200 : 201);
+};
+
+const routes = async (request, env, url, ctx) => {
+  const { pathname } = url;
+  const method = request.method;
+
+  if (method === 'GET' && pathname === '/api/health') {
+    return json({ status: 'ok', service: 'chanfiou-convoyage' });
+  }
+  if (method === 'POST' && pathname === '/api/requests') return createRequest(request, env, ctx);
+  if (method === 'GET' && pathname.startsWith('/api/requests/')) return readRequest(request, env, url);
+  if (method === 'POST' && pathname === '/api/session') return openSession(request, env);
+  if (method === 'GET' && pathname === '/api/push/key') return readPublicKey(env);
+  if (method === 'POST' && pathname === '/api/push/track') return registerClientSubscription(request, env);
+
+  if (pathname === '/api/missions') {
+    const operator = await operatorFrom(request, env);
+    if (!operator) return fail(401, 'Connexion requise.');
+    if (method === 'GET') return listMissions(request, env, url);
+    if (method === 'POST' || method === 'PATCH') return upsertMission(request, env, ctx);
+  }
+
+  if (method === 'POST' && pathname === '/api/abby/invoice') {
+    const operator = await operatorFrom(request, env);
+    if (!operator) return fail(401, 'Connexion requise.');
+    return transmitInvoiceToAbby(request, env);
+  }
+
+  if (method === 'POST' && (pathname === '/api/push/subscribe' || pathname === '/api/push/test')) {
+    const operator = await operatorFrom(request, env);
+    if (!operator) return fail(401, 'Connexion requise.');
+    return pathname === '/api/push/subscribe'
+      ? registerSubscription(request, env)
+      : sendTestNotification(env);
+  }
+
+  return fail(404, 'Route inconnue.');
+};
+
+export default {
+  async fetch(request, env, ctx) {
+    const url = new URL(request.url);
+    const headers = corsHeaders(request, env);
+
+    if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers });
+
+    try {
+      const response = await routes(request, env, url, ctx);
+      Object.entries(headers).forEach(([key, value]) => response.headers.set(key, value));
+      return response;
+    } catch (cause) {
+      console.error('erreur non gérée', cause);
+      return json({ error: 'Erreur interne du serveur.' }, 500, headers);
+    }
+  },
+};

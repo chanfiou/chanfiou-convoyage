@@ -1,0 +1,78 @@
+@font-face {
+  font-family: 'Archivo Brand';
+  src: url('__BRAND_FONT_SRC__') format('woff2-variations');
+  font-weight: 100 900;
+  font-stretch: 62% 125%;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --font-brand: 'Archivo Brand', 'Archivo', 'Helvetica Neue', system-ui, sans-serif;
+}
+
+h1,
+h2,
+h3,
+h4,
+.brand__name,
+.price-headline__amount,
+.stat__value,
+.invoice-document__total strong {
+  font-family: var(--font-brand);
+  font-variation-settings: 'wdth' 108;
+}
+
+.brand__name {
+  font-family: var(--font-brand);
+  font-size: 19px;
+  font-weight: 800;
+  font-variation-settings: 'wdth' 118;
+  letter-spacing: 0.01em;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.brand__name em {
+  font-style: normal;
+  color: var(--color-accent);
+}
+
+.brand__meta {
+  font-family: var(--font-brand);
+  font-variation-settings: 'wdth' 88;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+h1 {
+  font-weight: 800;
+  font-variation-settings: 'wdth' 112;
+}
+
+h2 {
+  font-weight: 700;
+}
+
+.price-headline__amount,
+.stat__value {
+  font-variation-settings: 'wdth' 100;
+  font-feature-settings: 'tnum' 1;
+}
+
+.wordmark {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.card-title,
+h2.card-title {
+  font-size: var(--font-h4);
+  font-weight: 600;
+  font-variation-settings: 'wdth' 104;
+  letter-spacing: 0;
+}

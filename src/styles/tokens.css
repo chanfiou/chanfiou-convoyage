@@ -1,0 +1,55 @@
+:root {
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+  --space-2xl: 32px;
+  --space-3xl: 48px;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+
+  --height-button-xs: 30px;
+  --height-button-s: 36px;
+  --height-button-m: 40px;
+  --height-button-l: 48px;
+
+  --font-h1: 32px;
+  --font-h2: 24px;
+  --font-h3: 20px;
+  --font-h4: 16px;
+  --font-body: 14px;
+  --font-small: 12px;
+
+  --color-canvas: #0b0f14;
+  --color-surface: #151c24;
+  --color-surface-raised: #1d2630;
+  --color-surface-sunken: #101720;
+  --color-border: #2a3542;
+  --color-border-strong: #5f7488;
+
+  --color-text: #eaf0f6;
+  --color-text-muted: #9aa8b8;
+  --color-text-inverse: #0b0f14;
+
+  --color-accent: #ff7a1a;
+  --color-accent-hover: #ff9147;
+  --color-accent-soft: rgba(255, 122, 26, 0.14);
+
+  --color-info: #60a5fa;
+  --color-info-soft: rgba(96, 165, 250, 0.16);
+  --color-success: #34d399;
+  --color-success-soft: rgba(52, 211, 153, 0.16);
+  --color-warning: #fbbf24;
+  --color-warning-soft: rgba(251, 191, 36, 0.16);
+  --color-danger: #fb7185;
+  --color-danger-soft: rgba(251, 113, 133, 0.16);
+
+  --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.32);
+  --shadow-sheet: 0 -8px 32px rgba(0, 0, 0, 0.48);
+
+  --layout-max-width: 520px;
+  --tab-bar-height: 64px;
+}

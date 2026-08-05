@@ -1,0 +1,6 @@
+node_modules
+dist
+server/.dev.vars
+server/.wrangler
+server/secrets-*.json
+*.sql.backup
