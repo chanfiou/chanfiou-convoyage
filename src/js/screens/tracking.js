@@ -1,7 +1,9 @@
 import { escapeHtml, html, icon, onClick } from '../core/dom.js';
 import { formatDateTime, formatDistance, formatEuro } from '../core/format.js';
-import { emptyState, errorState, fromHtml, showToast } from '../core/ui.js';
+import { emptyState, errorState, fromHtml, openSheet, showToast } from '../core/ui.js';
 import { PAYMENT } from '../config/company.js';
+import { contractMarkup, printContract } from './contract-document.js';
+import { printPv, pvMarkup, pvTitle } from './pv-document.js';
 import { getState, setState } from '../core/store.js';
 import { navigate, refresh } from '../core/router.js';
 import { MISSION_STATUSES, findMissionByReference, statusById } from '../domain/mission.js';
@@ -11,6 +13,25 @@ import { updateMission } from '../domain/mission.js';
 import { subscribeToPush } from '../domain/push-client.js';
 
 const TRACKED_STATUSES = MISSION_STATUSES.filter((status) => status.id !== 'annulee');
+
+const stepDocumentMarkup = (mission, statusId) => {
+  if (statusId === 'confirmee' && mission.termsAcceptedAt && mission.status !== 'demande') {
+    return html`<button type="button" class="button button--xs button--stroke" data-doc="contract" data-doc-mission="${mission.id}">
+      ${icon('receipt', 16)} Voir le contrat de convoyage
+    </button>`;
+  }
+  if (statusId === 'etat-des-lieux' && mission.departureReport) {
+    return html`<button type="button" class="button button--xs button--stroke" data-doc="departure" data-doc-mission="${mission.id}">
+      ${icon('camera', 16)} État des lieux signé
+    </button>`;
+  }
+  if (statusId === 'livree' && mission.arrivalReport) {
+    return html`<button type="button" class="button button--xs button--stroke" data-doc="arrival" data-doc-mission="${mission.id}">
+      ${icon('camera', 16)} PV de livraison signé
+    </button>`;
+  }
+  return '';
+};
 
 const timelineMarkup = (mission) => {
   const currentIndex = TRACKED_STATUSES.findIndex((status) => status.id === mission.status);
@@ -30,6 +51,7 @@ const timelineMarkup = (mission) => {
               <span class="text-small text-muted">
                 ${entry ? formatDateTime(entry.at) : 'À venir'}
               </span>
+              ${stepDocumentMarkup(mission, status.id)}
             </div>
           </li>
         `;
@@ -158,6 +180,31 @@ export const renderTracking = (params) => {
 
   onClick(view, '[data-goto]', (target) => navigate(target.dataset.goto));
 
+  onClick(view, '[data-doc]', (target) => {
+    const docMission = (getState().missions ?? []).find(
+      (entry) => entry.id === target.dataset.docMission,
+    );
+    if (!docMission) return;
+    const kind = target.dataset.doc;
+    const title = kind === 'contract' ? `Contrat ${docMission.reference}` : pvTitle(kind);
+    const body = kind === 'contract' ? contractMarkup(docMission) : pvMarkup(docMission, kind);
+    const sheet = openSheet(
+      title,
+      html`
+        <div class="stack-lg">
+          <button type="button" class="button button--s button--primary" data-print-doc>
+            ${icon('download', 20)} Imprimer / PDF
+          </button>
+          ${body}
+        </div>
+      `,
+    );
+    onClick(sheet.element, '[data-print-doc]', () => {
+      const printed = kind === 'contract' ? printContract(docMission) : printPv(docMission, kind);
+      if (!printed) showToast('Autorisez les fenêtres surgissantes pour imprimer.', 'danger');
+    });
+  });
+
   onClick(view, '[data-copy-iban]', async () => {
     try {
       await navigator.clipboard.writeText(PAYMENT.iban);
@@ -202,10 +249,15 @@ export const renderTracking = (params) => {
         const { data, error } = await fetchTrackedMission(entry.reference, entry.trackingToken);
         if (error || !data?.mission) return false;
         const distant = data.mission;
-        if (!distant.status || distant.status === entry.status) return false;
+        const reportsChanged =
+          Boolean(distant.departureReport) !== Boolean(entry.departureReport) ||
+          Boolean(distant.arrivalReport) !== Boolean(entry.arrivalReport);
+        if ((!distant.status || distant.status === entry.status) && !reportsChanged) return false;
         updateMission(entry.id, {
-          status: distant.status,
+          status: distant.status ?? entry.status,
           history: distant.history ?? entry.history,
+          departureReport: distant.departureReport ?? entry.departureReport ?? null,
+          arrivalReport: distant.arrivalReport ?? entry.arrivalReport ?? null,
         });
         // Demande confirmée : le devis qui lui a donné naissance est nettoyé.
         if (entry.status === 'demande' && distant.status !== 'demande') {

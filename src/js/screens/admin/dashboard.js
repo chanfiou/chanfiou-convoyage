@@ -1,7 +1,8 @@
 import { COMPANY } from '../../config/company.js';
 import { escapeHtml, html, icon, onClick } from '../../core/dom.js';
 import { formatDate, formatEuroRounded } from '../../core/format.js';
-import { emptyState, fromHtml, showToast } from '../../core/ui.js';
+import { emptyState, fromHtml, openSheet, showToast } from '../../core/ui.js';
+import { contractMarkup, printContract } from '../contract-document.js';
 import { getState, resetState, setState } from '../../core/store.js';
 import { navigate, refresh } from '../../core/router.js';
 import {
@@ -33,7 +34,7 @@ import { openReportSheet } from './report-sheet.js';
 const FILTERS = [
   { id: 'toutes', label: 'Toutes' },
   { id: 'a-traiter', label: 'À traiter', statuses: ['demande', 'confirmee', 'facturee', 'payee'] },
-  { id: 'en-cours', label: 'En route', statuses: ['en-cours'] },
+  { id: 'en-cours', label: 'En route', statuses: ['etat-des-lieux', 'en-cours'] },
   { id: 'terminees', label: 'Terminées', statuses: ['livree'] },
 ];
 
@@ -116,15 +117,20 @@ const missionRow = (mission) => {
             </button>`
           : ''}
         <button type="button" class="button button--xs button--stroke" data-report="departure" data-mission="${mission.id}">
-          ${mission.departureReport ? 'Voir le PV départ' : 'PV de départ'}
+          ${mission.departureReport ? 'Voir l’état des lieux' : 'État des lieux'}
         </button>
         <button type="button" class="button button--xs button--stroke" data-report="arrival" data-mission="${mission.id}">
-          ${mission.arrivalReport ? 'Voir le PV arrivée' : 'PV d’arrivée'}
+          ${mission.arrivalReport ? 'Voir le PV de livraison' : 'PV de livraison'}
         </button>
+        ${mission.termsAcceptedAt && mission.status !== 'annulee'
+          ? html`<button type="button" class="button button--xs button--stroke" data-contract="${mission.id}">
+              ${icon('receipt', 20)} Contrat
+            </button>`
+          : ''}
         <a class="button button--xs button--stroke" href="tel:${escapeHtml(mission.contactPhone ?? '')}">
           ${icon('phone', 20)} Appeler
         </a>
-        ${['confirmee', 'facturee', 'payee', 'en-cours', 'livree'].includes(mission.status)
+        ${['confirmee', 'facturee', 'payee', 'etat-des-lieux', 'en-cours', 'livree'].includes(mission.status)
           ? html`<button type="button" class="button button--xs button--secondary" data-invoice="${mission.id}">
               ${icon('receipt', 20)} ${invoiceForMission(mission.id) ? 'Voir la facture' : 'Facturer'}
             </button>`
@@ -375,10 +381,46 @@ export const renderAdmin = (params) => {
     reload();
   });
   onClick(view, '[data-advance]', (target) => {
-    advanceMissionStatus(target.dataset.advance, target.dataset.next);
+    const mission = getState().missions.find((entry) => entry.id === target.dataset.advance);
+    const next = target.dataset.next;
+    if (next === 'en-cours' && mission && !mission.departureReport) {
+      showToast('Établissez d’abord l’état des lieux de prise en charge.', 'danger');
+      openReportSheet(mission, 'departure', reload);
+      return;
+    }
+    if (next === 'livree' && mission && !mission.arrivalReport) {
+      showToast('Établissez d’abord le PV de livraison.', 'danger');
+      openReportSheet(mission, 'arrival', reload);
+      return;
+    }
+    advanceMissionStatus(target.dataset.advance, next);
     marquerASynchroniser(target.dataset.advance);
-    showToast(`Statut mis à jour : ${statusById(target.dataset.next).label}.`);
+    showToast(`Statut mis à jour : ${statusById(next).label}.`);
+    if (next === 'etat-des-lieux' && mission && !mission.departureReport) {
+      openReportSheet(mission, 'departure', reload);
+    }
     reload();
+  });
+
+  onClick(view, '[data-contract]', (target) => {
+    const mission = getState().missions.find((entry) => entry.id === target.dataset.contract);
+    if (!mission) return;
+    const sheet = openSheet(
+      `Contrat ${mission.reference}`,
+      html`
+        <div class="stack-lg">
+          <button type="button" class="button button--s button--primary" data-print-doc>
+            ${icon('download', 20)} Imprimer / PDF
+          </button>
+          ${contractMarkup(mission)}
+        </div>
+      `,
+    );
+    onClick(sheet.element, '[data-print-doc]', () => {
+      if (!printContract(mission)) {
+        showToast('Autorisez les fenêtres surgissantes pour imprimer le contrat.', 'danger');
+      }
+    });
   });
   onClick(view, '[data-cancel]', (target) => {
     advanceMissionStatus(target.dataset.cancel, 'annulee');

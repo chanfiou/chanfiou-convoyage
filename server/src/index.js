@@ -29,6 +29,10 @@ const CLIENT_VISIBLE_FIELDS = [
   'history',
   'createdAt',
   'updatedAt',
+  'vehicleModel',
+  'plate',
+  'departureReport',
+  'arrivalReport',
 ];
 
 const json = (data, status = 200, extraHeaders = {}) =>

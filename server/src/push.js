@@ -6,6 +6,7 @@ const CLIENT_STATUS_MESSAGES = {
   confirmee: 'Votre convoyage est confirmé. Votre facture arrive — le règlement lancera la mission.',
   facturee: 'Votre facture est émise. Réglez le virement depuis l’écran de suivi pour lancer votre convoyage.',
   payee: 'Paiement bien reçu — votre convoyage est programmé. Merci !',
+  'etat-des-lieux': 'Votre véhicule est pris en charge — l’état des lieux contradictoire est en cours.',
   'en-cours': 'Votre véhicule est en route vers sa destination.',
   livree: 'Votre véhicule est livré. Merci de votre confiance !',
   annulee: 'Votre convoyage a été annulé. Contactez-nous pour toute question.',

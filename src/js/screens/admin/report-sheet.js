@@ -90,7 +90,7 @@ const checklistMarkup = (existing) => html`
 export const openReportSheet = (mission, stage, onSaved) => {
   const isDeparture = stage === 'departure';
   const existing = isDeparture ? mission.departureReport : mission.arrivalReport;
-  const title = isDeparture ? 'Procès-verbal de départ' : 'Procès-verbal d’arrivée';
+  const title = isDeparture ? 'Procès-verbal de prise en charge' : 'Procès-verbal de livraison';
 
   const sheet = openSheet(
     title,

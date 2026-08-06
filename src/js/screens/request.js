@@ -9,6 +9,7 @@ import { bindHandoffPanel, buildHandoffLink, handoffPanelMarkup } from './reques
 import { isConfigured, submitRequest } from '../data/api.js';
 import { updateMission } from '../domain/mission.js';
 import { quoteInputFrom } from '../domain/chaining.js';
+import { TERMS_VERSION } from './conditions.js';
 
 const REQUIRED_FIELDS = ['contactName', 'contactPhone', 'pickupDate'];
 
@@ -118,6 +119,17 @@ export const renderRequest = () => {
             placeholder="Code d’accès, personne à contacter sur place, particularité du véhicule…"
           ></textarea>
         </div>
+        <label class="option">
+          <input type="checkbox" name="acceptTerms" data-accept-terms />
+          <span class="option__body">
+            <span class="option__label">J’accepte les conditions générales de convoyage</span>
+            <span class="text-small text-muted">
+              <button type="button" class="button button--xs button--link" data-goto="conditions">
+                Lire les conditions générales
+              </button>
+            </span>
+          </span>
+        </label>
         <p class="field__error" data-form-error hidden></p>
         <button type="submit" class="button button--l button--primary button--full">
           ${icon('send', 24)} Envoyer ma demande
@@ -149,11 +161,20 @@ export const renderRequest = () => {
       return;
     }
 
+    if (!view.querySelector('[data-accept-terms]').checked) {
+      errorLine.hidden = false;
+      errorLine.innerHTML = `${icon('alert', 16)} Acceptez les conditions générales de convoyage pour envoyer votre demande.`;
+      return;
+    }
+
     errorLine.hidden = true;
+    delete data.acceptTerms;
     const mission = createMission({
       departure: input.departure,
       arrival: input.arrival,
       quote,
+      termsAcceptedAt: new Date().toISOString(),
+      termsVersion: TERMS_VERSION,
       ...data,
     });
 

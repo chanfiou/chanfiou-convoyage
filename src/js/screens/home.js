@@ -114,6 +114,9 @@ export const renderHome = () => {
       </section>
 
       <p class="text-small text-muted" style="text-align: center">
+        <button type="button" class="button button--xs button--link" data-goto="conditions">
+          Conditions générales
+        </button>
         <button type="button" class="button button--xs button--link" data-goto="mentions">
           Mentions légales et données personnelles
         </button>
