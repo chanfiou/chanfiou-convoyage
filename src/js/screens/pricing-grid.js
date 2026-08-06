@@ -35,7 +35,7 @@ export const renderPricingGrid = () => {
   const view = fromHtml(html`
     <div class="screen">
       <header class="screen__head">
-        <h1>Grille tarifaire 2026</h1>
+        <h1>Grille tarifaire</h1>
         <p class="text-muted">
           ${escapeHtml(VAT_GRID_NOTE)} Péages, carburant, assurance et procès-verbal photo toujours
           inclus.

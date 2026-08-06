@@ -19,19 +19,21 @@ test('un trajet court applique le forfait minimum', () => {
 });
 
 test('le barème est dégressif par tranche cumulée', () => {
-  assert.equal(roadBasePrice(200), 196);
-  assert.equal(roadBasePrice(500), 460);
-  assert.equal(roadBasePrice(900), 772);
+  assert.equal(roadBasePrice(200), 230);
+  assert.equal(roadBasePrice(500), 515);
+  assert.equal(roadBasePrice(900), 855);
 });
 
+// Références août 2026 (comparatifs ConvoyMax / Portail Auto-Entrepreneur) :
+// ~1,50 €/km sur les 200 premiers km, ~1,15 €/km au-delà chez les plateformes.
 const MARKET_AVERAGE = [
-  { label: 'Paris → Orléans', kilometers: 130, approach: 130, market: 166 },
-  { label: 'Paris → Lille', kilometers: 248, approach: 248, market: 306 },
-  { label: 'Rouen → Reims', kilometers: 230, approach: 305, market: 285 },
-  { label: 'Paris → Lyon', kilometers: 471, approach: 471, market: 566 },
-  { label: 'Paris → Bordeaux', kilometers: 585, approach: 585, market: 694 },
-  { label: 'Lyon → Lille', kilometers: 679, approach: 726, market: 797 },
-  { label: 'Paris → Marseille', kilometers: 775, approach: 775, market: 903 },
+  { label: 'Paris → Orléans', kilometers: 130, approach: 130, market: 195 },
+  { label: 'Paris → Lille', kilometers: 248, approach: 248, market: 355 },
+  { label: 'Rouen → Reims', kilometers: 230, approach: 305, market: 334 },
+  { label: 'Paris → Lyon', kilometers: 471, approach: 471, market: 611 },
+  { label: 'Paris → Bordeaux', kilometers: 585, approach: 585, market: 742 },
+  { label: 'Lyon → Lille', kilometers: 679, approach: 726, market: 850 },
+  { label: 'Paris → Marseille', kilometers: 775, approach: 775, market: 961 },
 ];
 
 test('le prix reste sous la moyenne du marché sur les trajets liés à la base', () => {

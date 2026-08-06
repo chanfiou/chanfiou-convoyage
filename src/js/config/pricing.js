@@ -7,10 +7,10 @@ export const MINIMUM_FEE = 129;
 export const MINIMUM_FEE_DISTANCE = 80;
 
 export const DISTANCE_BRACKETS = [
-  { upTo: 200, pricePerKm: 0.98 },
-  { upTo: 500, pricePerKm: 0.88 },
-  { upTo: 900, pricePerKm: 0.78 },
-  { upTo: Infinity, pricePerKm: 0.68 },
+  { upTo: 200, pricePerKm: 1.15 },
+  { upTo: 500, pricePerKm: 0.95 },
+  { upTo: 900, pricePerKm: 0.85 },
+  { upTo: Infinity, pricePerKm: 0.75 },
 ];
 
 export const VEHICLE_CATEGORIES = [
