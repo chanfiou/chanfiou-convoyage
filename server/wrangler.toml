@@ -3,7 +3,8 @@ main = "src/index.js"
 compatibility_date = "2026-08-01"
 
 routes = [
-  { pattern = "api.chanfiou-convoyage.fr", custom_domain = true }
+  { pattern = "api.chanfiou-convoyage.fr", custom_domain = true },
+  { pattern = "www.chanfiou-convoyage.fr/*", zone_name = "chanfiou-convoyage.fr" }
 ]
 
 [[d1_databases]]

@@ -68,13 +68,6 @@ const run = async () => {
   await writeFile(path.join(DIST, 'app.js'), script, 'utf8');
   await cp(path.join(SRC, 'manifest.webmanifest'), path.join(DIST, 'manifest.webmanifest'));
 
-  // www redirige vers le domaine principal : un seul site, un seul cache PWA.
-  await writeFile(
-    path.join(DIST, '_redirects'),
-    'https://www.chanfiou-convoyage.fr/* https://chanfiou-convoyage.fr/:splat 301\n',
-    'utf8',
-  );
-
   const swSource = await readFile(path.join(SRC, 'sw.js'), 'utf8');
   const buildVersion = createHash('sha256')
     .update(template)

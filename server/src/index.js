@@ -266,6 +266,12 @@ const routes = async (request, env, url, ctx) => {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+
+    // www redirige vers le domaine principal : un seul site, un seul cache PWA.
+    if (url.hostname === 'www.chanfiou-convoyage.fr') {
+      return Response.redirect(`https://chanfiou-convoyage.fr${url.pathname}${url.search}`, 301);
+    }
+
     const headers = corsHeaders(request, env);
 
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers });
