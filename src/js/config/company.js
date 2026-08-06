@@ -58,8 +58,6 @@ export const COMMITMENTS = [
 
 export const PRO_ARGUMENTS = [
   'Remise automatique dès 3 convoyages par mois, sans compte à créer.',
-  'Une seule facture par mois, au format électronique exigé depuis septembre 2026.',
-  'Paiement à 30 jours, sans avance de frais de route.',
   'Transferts inter-sites, restitutions de leasing, navettes atelier et contrôle technique.',
 ];
 
