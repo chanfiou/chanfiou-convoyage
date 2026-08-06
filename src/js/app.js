@@ -14,13 +14,14 @@ import { renderLegal } from './screens/legal.js';
 import { startAutoSync } from './data/auto-sync.js';
 import { IS_OPERATOR_HOST } from './config/host.js';
 
-const TABS = [
-  { path: 'accueil', label: 'Accueil', icon: 'home' },
-  { path: 'devis', label: 'Devis', icon: 'calculator' },
-  { path: 'demande', label: 'Demande', icon: 'send' },
-  { path: 'suivi', label: 'Suivi', icon: 'route' },
-  ...(IS_OPERATOR_HOST ? [{ path: 'espace', label: 'Espace', icon: 'lock' }] : []),
-];
+const TABS = IS_OPERATOR_HOST
+  ? [{ path: 'espace', label: 'Espace convoyeur', icon: 'lock' }]
+  : [
+      { path: 'accueil', label: 'Accueil', icon: 'home' },
+      { path: 'devis', label: 'Devis', icon: 'calculator' },
+      { path: 'demande', label: 'Demande', icon: 'send' },
+      { path: 'suivi', label: 'Suivi', icon: 'route' },
+    ];
 
 const renderNotFound = () =>
   fromHtml(html`
