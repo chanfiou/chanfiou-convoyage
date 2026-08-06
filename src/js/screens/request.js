@@ -6,8 +6,7 @@ import { getState, setState } from '../core/store.js';
 import { navigate } from '../core/router.js';
 import { createMission } from '../domain/mission.js';
 import { bindHandoffPanel, buildHandoffLink, handoffPanelMarkup } from './request-sent.js';
-import { fetchAvailability, isConfigured, submitRequest } from '../data/api.js';
-import { bindCalendar } from './calendar.js';
+import { isConfigured, submitRequest } from '../data/api.js';
 import { updateMission } from '../domain/mission.js';
 import { quoteInputFrom } from '../domain/chaining.js';
 
@@ -101,10 +100,11 @@ export const renderRequest = () => {
         <h2 class="card-title">Logistique</h2>
         <div class="field">
           <label class="field__label">Date de prise en charge</label>
-          <input type="hidden" id="pickupDate" name="pickupDate" />
-          <div data-pickup-calendar></div>
-          <p class="field__hint" data-pickup-hint>
-            Seuls les jours où le convoyeur est disponible sont sélectionnables.
+          <input type="hidden" id="pickupDate" name="pickupDate" value="${escapeHtml(input.pickupDate ?? '')}" />
+          <p class="text-small">
+            ${input.pickupDate
+              ? html`${icon('calendar', 16)} ${escapeHtml(formatDate(input.pickupDate))} — choisie avec votre devis.`
+              : html`Choisissez votre date dans le devis avant d’envoyer la demande.`}
           </p>
         </div>
         ${fieldMarkup({ id: 'pickupAddress', label: 'Adresse exacte de départ', placeholder: '12 rue des Ateliers' })}
@@ -129,26 +129,6 @@ export const renderRequest = () => {
   `);
 
   onClick(view, '[data-goto]', (target) => navigate(target.dataset.goto));
-
-  const calendarSlot = view.querySelector('[data-pickup-calendar]');
-  const pickupInput = view.querySelector('#pickupDate');
-  const pickupHint = view.querySelector('[data-pickup-hint]');
-  const now = new Date();
-  const minDay = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-  const calendar = bindCalendar(calendarSlot, {
-    mode: 'select',
-    minDay,
-    onDayClick: (day) => {
-      pickupInput.value = day;
-      calendar.select(day);
-      pickupHint.textContent = `Prise en charge le ${formatDate(day)}.`;
-    },
-  });
-  if (isConfigured()) {
-    fetchAvailability().then(({ data }) => {
-      if (data?.days) calendar.setBlocked(new Set(data.days));
-    });
-  }
 
   const form = view.querySelector('[data-request-form]');
   const errorLine = view.querySelector('[data-form-error]');

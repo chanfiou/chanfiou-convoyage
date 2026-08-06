@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { approachPrice, computeQuote, roadBasePrice, volumeDiscountFor } from '../src/js/domain/quote.js';
+import {
+  approachPrice,
+  computeQuote,
+  roadBasePrice,
+  urgencyIdFromPickupDate,
+  volumeDiscountFor,
+} from '../src/js/domain/quote.js';
 import { estimateRoadDistance } from '../src/js/domain/geo.js';
 import {
   APPROACH_FREE_KILOMETERS,
@@ -48,6 +54,16 @@ test('le prix reste sous la moyenne du marché sur les trajets liés à la base'
       `${route.label} : ${quote.totalExcludingVat.toFixed(0)} € contre ${route.market} € au marché, soit ${(gap * 100).toFixed(0)} %`,
     );
   });
+});
+
+test('la majoration d’urgence découle de la date de prise en charge', () => {
+  const reference = new Date('2026-08-06T10:00:00');
+  assert.equal(urgencyIdFromPickupDate('2026-08-06', reference), 'express');
+  assert.equal(urgencyIdFromPickupDate('2026-08-07', reference), 'express');
+  assert.equal(urgencyIdFromPickupDate('2026-08-08', reference), 'rapide');
+  assert.equal(urgencyIdFromPickupDate('2026-08-09', reference), 'standard');
+  assert.equal(urgencyIdFromPickupDate('', reference), 'standard');
+  assert.equal(urgencyIdFromPickupDate(undefined, reference), 'standard');
 });
 
 test('le prix ne descend jamais sous le plancher du marché', () => {

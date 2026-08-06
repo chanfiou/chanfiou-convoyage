@@ -4,11 +4,11 @@ import {
   HOME_BASE,
   NIGHT_SURCHARGE,
   SCHEDULE_SURCHARGES,
-  URGENCY_LEVELS,
   VEHICLE_CATEGORIES,
 } from '../config/pricing.js';
 import { escapeHtml, html, icon, onChange, onClick, onInput } from '../core/dom.js';
 import {
+  formatDate,
   formatDistance,
   formatDuration,
   formatEuro,
@@ -17,7 +17,9 @@ import {
 import { fromHtml, showToast } from '../core/ui.js';
 import { getState, setState } from '../core/store.js';
 import { navigate } from '../core/router.js';
-import { computeQuote } from '../domain/quote.js';
+import { computeQuote, urgencyIdFromPickupDate } from '../domain/quote.js';
+import { fetchAvailability, isConfigured } from '../data/api.js';
+import { bindCalendar } from './calendar.js';
 import { estimateRoadDistance } from '../domain/geo.js';
 import { TOTAL_LABEL, VAT_HEADLINE_NOTE, showsVatLines, vatRatePercent } from '../domain/vat.js';
 import { bindCityField, cityFieldMarkup } from './city-input.js';
@@ -28,7 +30,7 @@ const DEFAULT_INPUT = {
   kilometers: 0,
   distanceIsManual: false,
   vehicleId: 'citadine',
-  urgencyId: 'standard',
+  pickupDate: '',
   scheduleId: 'semaine',
   isNightDeparture: false,
   vehicleCount: 1,
@@ -221,10 +223,13 @@ export const renderQuote = (params) => {
       </section>
 
       <section class="card">
-        <h2 class="card-title">Délai souhaité</h2>
-        <div class="option-list" data-group="urgency">
-          ${URGENCY_LEVELS.map((option) => radioOption(option, 'urgencyId', input.urgencyId))}
-        </div>
+        <h2 class="card-title">Date de prise en charge</h2>
+        <p class="text-small text-muted">
+          Seuls les jours disponibles sont sélectionnables. Un départ sous 48 heures entraîne une
+          majoration, appliquée automatiquement dans le détail du prix.
+        </p>
+        <div data-pickup-calendar></div>
+        <p class="field__hint" data-pickup-hint>Choisissez votre jour de prise en charge.</p>
       </section>
 
       <section class="card">
@@ -304,6 +309,44 @@ export const renderQuote = (params) => {
   const approachDetail = view.querySelector('[data-approach-detail]');
   const approachState = { kilometers: input.approachKilometers ?? 0, outbound: 0, inbound: 0 };
 
+  const now = new Date();
+  const todayIso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const pickupState = { day: input.pickupDate || null };
+  const pickupHint = view.querySelector('[data-pickup-hint]');
+
+  const describePickup = () => {
+    if (!pickupState.day) {
+      pickupHint.textContent = 'Choisissez votre jour de prise en charge.';
+      return;
+    }
+    const urgency = urgencyIdFromPickupDate(pickupState.day);
+    const note =
+      urgency === 'express'
+        ? ' Départ sous 24 heures : majoration de 30 % appliquée.'
+        : urgency === 'rapide'
+          ? ' Départ sous 48 heures : majoration de 15 % appliquée.'
+          : ' Aucune majoration d’urgence.';
+    pickupHint.textContent = `Prise en charge le ${formatDate(pickupState.day)}.${note}`;
+  };
+
+  const pickupCalendar = bindCalendar(view.querySelector('[data-pickup-calendar]'), {
+    mode: 'select',
+    minDay: todayIso,
+    selected: pickupState.day,
+    onDayClick: (day) => {
+      pickupState.day = day;
+      pickupCalendar.select(day);
+      describePickup();
+      render();
+    },
+  });
+  if (isConfigured()) {
+    fetchAvailability().then(({ data }) => {
+      if (data?.days) pickupCalendar.setBlocked(new Set(data.days));
+    });
+  }
+  describePickup();
+
   const refreshApproach = (departure, arrival) => {
     const outbound = estimateRoadDistance(HOME_BASE.label, departure);
     const inbound = estimateRoadDistance(arrival, HOME_BASE.label);
@@ -340,7 +383,8 @@ export const renderQuote = (params) => {
       approachKilometers: approachState.kilometers,
       distanceIsManual: input.distanceIsManual,
       vehicleId: view.querySelector('input[name="vehicleId"]:checked').value,
-      urgencyId: view.querySelector('input[name="urgencyId"]:checked').value,
+      pickupDate: pickupState.day ?? '',
+      urgencyId: urgencyIdFromPickupDate(pickupState.day ?? ''),
       scheduleId: view.querySelector('input[name="scheduleId"]:checked').value,
       isNightDeparture: view.querySelector('input[name="isNightDeparture"]').checked,
       vehicleCount: Number(view.querySelector('#vehicleCount').value) || 1,
@@ -406,6 +450,10 @@ export const renderQuote = (params) => {
     const current = readInput();
     if (current.kilometers < 1) {
       showToast('Renseignez la distance pour envoyer votre demande.', 'danger');
+      return;
+    }
+    if (!current.pickupDate) {
+      showToast('Choisissez votre date de prise en charge dans le calendrier.', 'danger');
       return;
     }
     setState({ lastQuote: { input: current, quote: computeQuote(current) } });

@@ -19,6 +19,18 @@ const roundToCents = (amount) => Math.round(amount * 100) / 100;
 
 const findById = (collection, id) => collection.find((entry) => entry.id === id) ?? collection[0];
 
+// La majoration d'urgence découle de la date de prise en charge choisie :
+// départ aujourd'hui ou demain = express, surlendemain = rapide.
+export const urgencyIdFromPickupDate = (pickupDay, reference = new Date()) => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(pickupDay ?? '')) return 'standard';
+  const start = new Date(reference.getFullYear(), reference.getMonth(), reference.getDate());
+  const target = new Date(`${pickupDay}T00:00:00`);
+  const diffDays = Math.round((target - start) / 86400000);
+  if (diffDays <= 1) return 'express';
+  if (diffDays <= 2) return 'rapide';
+  return 'standard';
+};
+
 export const roadBasePrice = (kilometers) => {
   if (kilometers <= MINIMUM_FEE_DISTANCE) return MINIMUM_FEE;
   let remaining = kilometers;

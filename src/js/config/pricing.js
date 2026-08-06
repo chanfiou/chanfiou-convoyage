@@ -27,9 +27,9 @@ export const APPROACH_FREE_KILOMETERS = 100;
 export const APPROACH_MAX_FEE = 120;
 
 export const URGENCY_LEVELS = [
-  { id: 'standard', label: 'Standard', hint: 'Sous 5 jours ouvrés', surcharge: 0 },
-  { id: 'rapide', label: 'Rapide', hint: 'Sous 48 heures', surcharge: 0.15 },
-  { id: 'express', label: 'Express', hint: 'Sous 24 heures', surcharge: 0.3 },
+  { id: 'standard', label: 'Départ planifié', hint: 'Plus de 48 heures à l’avance', surcharge: 0 },
+  { id: 'rapide', label: 'Départ sous 48 heures', hint: 'Appliqué selon la date choisie', surcharge: 0.15 },
+  { id: 'express', label: 'Départ sous 24 heures', hint: 'Appliqué selon la date choisie', surcharge: 0.3 },
 ];
 
 export const SCHEDULE_SURCHARGES = [
