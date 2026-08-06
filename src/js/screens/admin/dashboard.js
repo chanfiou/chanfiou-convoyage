@@ -32,7 +32,7 @@ import { openReportSheet } from './report-sheet.js';
 
 const FILTERS = [
   { id: 'toutes', label: 'Toutes' },
-  { id: 'a-traiter', label: 'À traiter', statuses: ['demande', 'confirmee', 'facturee'] },
+  { id: 'a-traiter', label: 'À traiter', statuses: ['demande', 'confirmee', 'facturee', 'payee'] },
   { id: 'en-cours', label: 'En route', statuses: ['en-cours'] },
   { id: 'terminees', label: 'Terminées', statuses: ['livree'] },
 ];
@@ -124,7 +124,7 @@ const missionRow = (mission) => {
         <a class="button button--xs button--stroke" href="tel:${escapeHtml(mission.contactPhone ?? '')}">
           ${icon('phone', 20)} Appeler
         </a>
-        ${['confirmee', 'en-cours', 'livree', 'facturee'].includes(mission.status)
+        ${['confirmee', 'facturee', 'payee', 'en-cours', 'livree'].includes(mission.status)
           ? html`<button type="button" class="button button--xs button--secondary" data-invoice="${mission.id}">
               ${icon('receipt', 20)} ${invoiceForMission(mission.id) ? 'Voir la facture' : 'Facturer'}
             </button>`

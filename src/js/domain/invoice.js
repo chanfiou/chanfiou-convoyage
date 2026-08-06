@@ -209,7 +209,7 @@ export const createInvoiceForMission = (mission) => createInvoiceForMissions([mi
 
 export const groupInvoiceableMissions = (missions, invoices) => {
   const uninvoiced = missions
-    .filter((mission) => ['confirmee', 'en-cours', 'livree', 'facturee'].includes(mission.status))
+    .filter((mission) => ['confirmee', 'facturee', 'payee', 'en-cours', 'livree'].includes(mission.status))
     .filter((mission) => !invoices.some((invoice) => invoiceCoversMission(invoice, mission.id)));
 
   const groups = new Map();

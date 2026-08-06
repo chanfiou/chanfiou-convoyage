@@ -1,10 +1,11 @@
 import { getState, setState } from '../core/store.js';
 
-// La facture est émise et réglée après la confirmation, avant le départ.
+// La facture est émise puis réglée après la confirmation, avant le départ.
 export const MISSION_STATUSES = [
   { id: 'demande', label: 'Demande reçue', tone: 'neutral', next: 'confirmee' },
   { id: 'confirmee', label: 'Confirmée', tone: 'info', next: 'facturee' },
-  { id: 'facturee', label: 'Facturée — règlement', tone: 'warning', next: 'en-cours' },
+  { id: 'facturee', label: 'Facturée', tone: 'warning', next: 'payee' },
+  { id: 'payee', label: 'Paiement validé', tone: 'success', next: 'en-cours' },
   { id: 'en-cours', label: 'En cours de route', tone: 'progress', next: 'livree' },
   { id: 'livree', label: 'Livrée', tone: 'success', next: null },
   { id: 'annulee', label: 'Annulée', tone: 'danger', next: null },
