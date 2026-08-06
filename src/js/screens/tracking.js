@@ -1,6 +1,7 @@
 import { escapeHtml, html, icon, onClick } from '../core/dom.js';
 import { formatDateTime, formatDistance, formatEuro } from '../core/format.js';
-import { emptyState, errorState, fromHtml } from '../core/ui.js';
+import { emptyState, errorState, fromHtml, showToast } from '../core/ui.js';
+import { PAYMENT } from '../config/company.js';
 import { getState } from '../core/store.js';
 import { navigate, refresh } from '../core/router.js';
 import { MISSION_STATUSES, findMissionByReference, statusById } from '../domain/mission.js';
@@ -37,6 +38,31 @@ const timelineMarkup = (mission) => {
   `;
 };
 
+const groupedIban = (iban) => iban.replace(/(.{4})/g, '$1 ').trim();
+
+const paymentCardMarkup = (mission) => html`
+  <div class="card card--flat stack-sm">
+    <h3 class="card-title">${icon('receipt', 20)} Règlement par virement</h3>
+    <p class="text-small text-muted">
+      Votre convoyage démarre dès réception du virement. Privilégiez le virement instantané,
+      gratuit dans la plupart des banques.
+    </p>
+    <div class="price-summary__line price-summary__line--total">
+      <span>Montant à régler</span>
+      <span>${formatEuro(mission.quote.totalIncludingVat)}</span>
+    </div>
+    <p class="text-small">Bénéficiaire : <strong>${escapeHtml(PAYMENT.holder)}</strong></p>
+    <p class="text-small">IBAN : <strong>${escapeHtml(groupedIban(PAYMENT.iban))}</strong></p>
+    <p class="text-small">BIC : <strong>${escapeHtml(PAYMENT.bic)}</strong></p>
+    <p class="text-small">
+      Référence à indiquer : <strong>${escapeHtml(mission.reference)}</strong>
+    </p>
+    <button type="button" class="button button--s button--secondary" data-copy-iban>
+      Copier l’IBAN
+    </button>
+  </div>
+`;
+
 const missionCard = (mission) => {
   const status = statusById(mission.status);
   return html`
@@ -58,6 +84,7 @@ const missionCard = (mission) => {
         <span>Montant ${TOTAL_LABEL.toLowerCase()}</span>
         <span>${formatEuro(mission.quote.totalIncludingVat)}</span>
       </div>
+      ${mission.status === 'confirmee' ? paymentCardMarkup(mission) : ''}
       ${mission.arrivalReport
         ? html`<p class="text-small text-muted">
             Livré le ${formatDateTime(mission.arrivalReport.completedAt)} — procès-verbal signé.
@@ -130,6 +157,15 @@ export const renderTracking = (params) => {
   `);
 
   onClick(view, '[data-goto]', (target) => navigate(target.dataset.goto));
+
+  onClick(view, '[data-copy-iban]', async () => {
+    try {
+      await navigator.clipboard.writeText(PAYMENT.iban);
+      showToast('IBAN copié. Collez-le dans votre application bancaire.');
+    } catch {
+      showToast('Copie impossible : sélectionnez l’IBAN à la main.', 'danger');
+    }
+  });
 
   onClick(view, '[data-notify]', async (target) => {
     const tracked = (getState().missions ?? []).find((entry) => entry.id === target.dataset.notify);

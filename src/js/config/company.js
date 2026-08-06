@@ -15,6 +15,14 @@ export const COMPANY = {
   adminAccessCode: '2026',
 };
 
+export const PAYMENT = {
+  method: 'Virement bancaire',
+  holder: 'Moustapha Chanfiou',
+  bank: 'Revolut Pro',
+  iban: 'FR7628233000017332333877915',
+  bic: 'REVOFRP2',
+};
+
 export const COMMITMENTS = [
   {
     icon: 'truck',

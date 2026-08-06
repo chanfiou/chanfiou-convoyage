@@ -124,7 +124,7 @@ const missionRow = (mission) => {
         <a class="button button--xs button--stroke" href="tel:${escapeHtml(mission.contactPhone ?? '')}">
           ${icon('phone', 20)} Appeler
         </a>
-        ${['livree', 'facturee'].includes(mission.status)
+        ${['confirmee', 'en-cours', 'livree', 'facturee'].includes(mission.status)
           ? html`<button type="button" class="button button--xs button--secondary" data-invoice="${mission.id}">
               ${icon('receipt', 20)} ${invoiceForMission(mission.id) ? 'Voir la facture' : 'Facturer'}
             </button>`

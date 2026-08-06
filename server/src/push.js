@@ -3,7 +3,7 @@ import { timingSafeEqual } from './crypto.js';
 const encoder = new TextEncoder();
 
 const CLIENT_STATUS_MESSAGES = {
-  confirmee: 'Votre convoyage est confirmé. Nous vous préviendrons à chaque étape.',
+  confirmee: 'Votre convoyage est confirmé. Réglez le virement depuis l’écran de suivi pour lancer la mission.',
   'en-cours': 'Votre véhicule est en route vers sa destination.',
   livree: 'Votre véhicule est livré. Merci de votre confiance !',
   annulee: 'Votre convoyage a été annulé. Contactez-nous pour toute question.',
