@@ -90,7 +90,15 @@ export const startApp = (root) => {
   const { shell, tabBar } = buildShell();
   root.append(shell, tabBar);
 
-  registerRoute('accueil', renderHome);
+  if (IS_OPERATOR_HOST) {
+    // Le domaine convoyeur n'affiche jamais la page d'accueil clients.
+    registerRoute('accueil', () => {
+      navigate('espace');
+      return null;
+    });
+  } else {
+    registerRoute('accueil', renderHome);
+  }
   registerRoute('devis', renderQuote);
   registerRoute('demande', renderRequest);
   registerRoute('suivi', renderTracking);
