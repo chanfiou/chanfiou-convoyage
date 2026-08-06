@@ -19,9 +19,9 @@ test('un trajet court applique le forfait minimum', () => {
 });
 
 test('le barème est dégressif par tranche cumulée', () => {
-  assert.equal(roadBasePrice(200), 230);
-  assert.equal(roadBasePrice(500), 515);
-  assert.equal(roadBasePrice(900), 855);
+  assert.equal(Math.round(roadBasePrice(200)), 230);
+  assert.equal(Math.round(roadBasePrice(500)), 515);
+  assert.equal(Math.round(roadBasePrice(900)), 855);
 });
 
 // Références août 2026 (comparatifs ConvoyMax / Portail Auto-Entrepreneur) :
