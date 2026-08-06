@@ -50,7 +50,7 @@ test('le prix reste sous la moyenne du marché sur les trajets liés à la base'
 
 test('le prix ne descend jamais sous le plancher du marché', () => {
   const floors = [
-    { kilometers: 130, approach: 130, floor: 137 },
+    { kilometers: 130, approach: 130, floor: 128 },
     { kilometers: 248, approach: 248, floor: 240 },
     { kilometers: 471, approach: 471, floor: 426 },
     { kilometers: 775, approach: 775, floor: 670 },

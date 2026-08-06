@@ -13,7 +13,7 @@ export const DEFAULT_SETTINGS = {
   email: 'malrproductions@gmail.com',
   iban: 'FR7628233000017332333877915',
   bic: 'REVOFRP2',
-  paymentTermDays: 30,
+  paymentTermDays: 0,
   latePenaltyRate: 'trois fois le taux d’intérêt légal',
   recoveryIndemnity: 40,
   platformName: 'Abby',

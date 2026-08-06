@@ -128,6 +128,7 @@ export const buildInvoiceFromMissions = (missions, invoices, issuedAt) => {
   const totals = computeInvoiceTotals(lines, allowances);
   const deliveredAt =
     reference.arrivalReport?.completedAt ?? reference.pickupDate ?? issuedAt;
+  const paymentTermDays = Number(settings.paymentTermDays) || 0;
 
   return {
     id: `invoice-${new Date(issuedAt).getTime()}`,
@@ -138,7 +139,8 @@ export const buildInvoiceFromMissions = (missions, invoices, issuedAt) => {
     missionReference:
       missions.length === 1 ? reference.reference : `${missions.length} missions groupées`,
     issuedAt,
-    dueAt: addDays(issuedAt, Number(settings.paymentTermDays) || 30),
+    // Paiement à réception : 2 jours de tolérance avant l'alerte de retard.
+    dueAt: addDays(issuedAt, paymentTermDays > 0 ? paymentTermDays : 2),
     deliveredAt,
     status: 'emise',
     transmittedAt: null,
@@ -171,7 +173,10 @@ export const buildInvoiceFromMissions = (missions, invoices, issuedAt) => {
       email: reference.contactEmail ?? '',
     },
     deliveryAddress: reference.dropAddress?.trim() || reference.arrival,
-    paymentTerms: `Paiement à ${Number(settings.paymentTermDays) || 30} jours nets`,
+    paymentTerms:
+      paymentTermDays > 0
+        ? `Paiement à ${paymentTermDays} jours nets`
+        : 'Payable à réception, par virement bancaire',
     latePenaltyMention: `Tout retard de paiement engendre une pénalité exigible à compter de la date d’échéance, calculée sur la base de ${settings.latePenaltyRate}.`,
     recoveryIndemnityMention: `Indemnité forfaitaire pour frais de recouvrement en cas de retard de paiement : ${settings.recoveryIndemnity} €.`,
     noDiscountMention: 'Les règlements reçus avant la date d’échéance ne donneront pas lieu à escompte.',

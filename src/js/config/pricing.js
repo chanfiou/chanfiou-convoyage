@@ -3,7 +3,7 @@ export const VAT_RATE = VAT_EXEMPT ? 0 : 0.2;
 export const VAT_EXEMPTION_MENTION = 'TVA non applicable, article 293 B du CGI';
 export const VAT_EXEMPTION_CODE = 'VATEX-FR-FRANCHISE';
 
-export const MINIMUM_FEE = 139;
+export const MINIMUM_FEE = 129;
 export const MINIMUM_FEE_DISTANCE = 80;
 
 export const DISTANCE_BRACKETS = [
