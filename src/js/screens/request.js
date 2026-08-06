@@ -2,7 +2,7 @@ import { COMPANY } from '../config/company.js';
 import { escapeHtml, html, icon, onClick } from '../core/dom.js';
 import { formatDistance, formatEuro } from '../core/format.js';
 import { emptyState, fromHtml, showToast } from '../core/ui.js';
-import { getState } from '../core/store.js';
+import { getState, setState } from '../core/store.js';
 import { navigate } from '../core/router.js';
 import { createMission } from '../domain/mission.js';
 import { bindHandoffPanel, buildHandoffLink, handoffPanelMarkup } from './request-sent.js';
@@ -197,6 +197,12 @@ export const renderRequest = () => {
           trackingToken: data.token,
           sentToServerAt: new Date().toISOString(),
         });
+        // Le devis est rattaché à la demande envoyée : il sera nettoyé
+        // automatiquement à la confirmation du convoyage.
+        const { lastQuote: currentQuote } = getState();
+        if (currentQuote) {
+          setState({ lastQuote: { ...currentQuote, sentReference: data.reference } });
+        }
         slot.innerHTML = html`
           <section class="card card--accent" aria-live="polite">
             <h2 class="card-title">Demande envoyée</h2>

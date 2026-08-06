@@ -2,7 +2,7 @@ import { escapeHtml, html, icon, onClick } from '../core/dom.js';
 import { formatDateTime, formatDistance, formatEuro } from '../core/format.js';
 import { emptyState, errorState, fromHtml, showToast } from '../core/ui.js';
 import { PAYMENT } from '../config/company.js';
-import { getState } from '../core/store.js';
+import { getState, setState } from '../core/store.js';
 import { navigate, refresh } from '../core/router.js';
 import { MISSION_STATUSES, findMissionByReference, statusById } from '../domain/mission.js';
 import { TOTAL_LABEL } from '../domain/vat.js';
@@ -191,14 +191,31 @@ export const renderTracking = (params) => {
     show('C’est noté : vous serez prévenu sur cet appareil à chaque étape de votre convoyage. ✓');
   });
 
-  if (mission?.trackingToken && isConfigured()) {
-    fetchTrackedMission(mission.reference, mission.trackingToken).then(({ data, error }) => {
-      if (error || !data?.mission) return;
-      const distant = data.mission;
-      if (distant.status && distant.status !== mission.status) {
-        updateMission(mission.id, { status: distant.status, history: distant.history ?? mission.history });
-        refresh();
-      }
+  // Toutes les missions affichées encore en cours sont réactualisées auprès
+  // du serveur, pas seulement celle recherchée par référence.
+  const trackedMissions = (mission ? [mission] : missions).filter(
+    (entry) => entry.trackingToken && !['livree', 'annulee'].includes(entry.status),
+  );
+  if (isConfigured() && trackedMissions.length > 0) {
+    Promise.all(
+      trackedMissions.map(async (entry) => {
+        const { data, error } = await fetchTrackedMission(entry.reference, entry.trackingToken);
+        if (error || !data?.mission) return false;
+        const distant = data.mission;
+        if (!distant.status || distant.status === entry.status) return false;
+        updateMission(entry.id, {
+          status: distant.status,
+          history: distant.history ?? entry.history,
+        });
+        // Demande confirmée : le devis qui lui a donné naissance est nettoyé.
+        if (entry.status === 'demande' && distant.status !== 'demande') {
+          const { lastQuote } = getState();
+          if (lastQuote?.sentReference === entry.reference) setState({ lastQuote: null });
+        }
+        return true;
+      }),
+    ).then((changes) => {
+      if (changes.some(Boolean)) refresh();
     });
   }
 

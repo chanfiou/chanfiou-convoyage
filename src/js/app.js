@@ -1,7 +1,7 @@
 import { COMPANY } from './config/company.js';
 import { html, icon, onClick } from './core/dom.js';
 import { fromHtml } from './core/ui.js';
-import { currentRoute, navigate, onNavigate, registerRoute, startRouter } from './core/router.js';
+import { currentRoute, navigate, onNavigate, refresh, registerRoute, startRouter } from './core/router.js';
 import { renderHome } from './screens/home.js';
 import { renderQuote } from './screens/quote.js';
 import { renderRequest } from './screens/request.js';
@@ -116,6 +116,21 @@ export const startApp = (root) => {
   startRouter(outlet, renderNotFound);
   highlightActiveTab(tabBar, currentRoute().path);
   startAutoSync();
+
+  // L'écran de suivi se réactualise quand l'application revient au premier
+  // plan ou qu'une notification arrive (le rendu relance la vérification serveur).
+  const refreshTrackingScreen = () => {
+    if (currentRoute().path === 'suivi') refresh();
+  };
+  window.addEventListener('focus', refreshTrackingScreen);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) refreshTrackingScreen();
+  });
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('message', (event) => {
+      if (event.data?.type === 'sync') refreshTrackingScreen();
+    });
+  }
 
   const splash = document.getElementById('splash');
   if (splash) {
