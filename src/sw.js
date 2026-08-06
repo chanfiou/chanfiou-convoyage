@@ -54,12 +54,16 @@ self.addEventListener('push', (event) => {
     data = {};
   }
   event.waitUntil(
-    self.registration.showNotification(data.title ?? 'Chanfiou', {
-      body: data.body ?? '',
-      icon: './assets/icon-192.png',
-      badge: './assets/icon-192.png',
-      data: { url: data.url ?? './#/espace' },
-    }),
+    (async () => {
+      await self.registration.showNotification(data.title ?? 'Chanfiou', {
+        body: data.body ?? '',
+        icon: './assets/icon-192.png',
+        badge: './assets/icon-192.png',
+        data: { url: data.url ?? './#/espace' },
+      });
+      const clients = await self.clients.matchAll({ type: 'window' });
+      clients.forEach((client) => client.postMessage({ type: 'sync' }));
+    })(),
   );
 });
 

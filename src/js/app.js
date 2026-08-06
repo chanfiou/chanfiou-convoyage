@@ -11,6 +11,7 @@ import { renderAdmin } from './screens/admin/dashboard.js';
 import { renderInvoices } from './screens/admin/invoices.js';
 import { renderImportRequest } from './screens/import-request.js';
 import { renderLegal } from './screens/legal.js';
+import { startAutoSync } from './data/auto-sync.js';
 
 const TABS = [
   { path: 'accueil', label: 'Accueil', icon: 'home' },
@@ -100,6 +101,7 @@ export const startApp = (root) => {
 
   startRouter(outlet, renderNotFound);
   highlightActiveTab(tabBar, currentRoute().path);
+  startAutoSync();
 
   const splash = document.getElementById('splash');
   if (splash) {
