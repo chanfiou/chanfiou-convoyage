@@ -12,13 +12,14 @@ import { renderInvoices } from './screens/admin/invoices.js';
 import { renderImportRequest } from './screens/import-request.js';
 import { renderLegal } from './screens/legal.js';
 import { startAutoSync } from './data/auto-sync.js';
+import { IS_OPERATOR_HOST } from './config/host.js';
 
 const TABS = [
   { path: 'accueil', label: 'Accueil', icon: 'home' },
   { path: 'devis', label: 'Devis', icon: 'calculator' },
   { path: 'demande', label: 'Demande', icon: 'send' },
   { path: 'suivi', label: 'Suivi', icon: 'route' },
-  { path: 'espace', label: 'Espace', icon: 'lock' },
+  ...(IS_OPERATOR_HOST ? [{ path: 'espace', label: 'Espace', icon: 'lock' }] : []),
 ];
 
 const renderNotFound = () =>
@@ -81,6 +82,10 @@ const highlightActiveTab = (tabBar, path) => {
 };
 
 export const startApp = (root) => {
+  if (IS_OPERATOR_HOST && !window.location.hash) {
+    window.location.hash = '#/espace';
+  }
+
   const { shell, tabBar } = buildShell();
   root.append(shell, tabBar);
 
