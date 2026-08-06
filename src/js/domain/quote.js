@@ -80,7 +80,7 @@ export const computeQuote = (input) => {
   }
   if (urgency.surcharge > 0) {
     surchargeLines.push({
-      label: `Délai ${urgency.label.toLowerCase()}`,
+      label: urgency.label,
       rate: urgency.surcharge,
       amount: base * urgency.surcharge,
     });
