@@ -8,6 +8,13 @@ import {
   registerSubscription,
   sendTestNotification,
 } from './push.js';
+import {
+  blockDayForMission,
+  isDayBlocked,
+  listAvailability,
+  setAvailability,
+  unblockDayForMission,
+} from './availability.js';
 
 const SESSION_DURATION_SECONDS = 60 * 60 * 24 * 30;
 const MAX_PAYLOAD_BYTES = 512 * 1024;
@@ -104,6 +111,11 @@ const createRequest = async (request, env, ctx) => {
   const mission = body?.mission;
   if (!mission?.departure || !mission?.arrival || !mission?.quote?.kilometers) {
     return fail(422, 'Demande incomplète : trajet ou distance manquants.');
+  }
+
+  const pickupDay = String(mission.pickupDate ?? '').slice(0, 10);
+  if (pickupDay && (await isDayBlocked(env, pickupDay))) {
+    return fail(422, 'Cette date n’est plus disponible. Choisissez un autre jour de prise en charge.');
   }
 
   const now = new Date().toISOString();
@@ -219,6 +231,13 @@ const upsertMission = async (request, env, ctx) => {
     .run();
 
   if (existing && existing.status !== mission.status) {
+    // La journée se réserve à la confirmation et se libère à l'annulation.
+    if (mission.status === 'confirmee') {
+      await blockDayForMission(env, stored.pickupDate, mission.reference);
+    }
+    if (mission.status === 'annulee') {
+      await unblockDayForMission(env, mission.reference);
+    }
     ctx?.waitUntil(notifyClientStatusChange(env, mission.reference, mission.status));
   }
 
@@ -237,6 +256,17 @@ const routes = async (request, env, url, ctx) => {
   if (method === 'GET' && pathname.startsWith('/api/requests/')) return readRequest(request, env, url);
   if (method === 'POST' && pathname === '/api/session') return openSession(request, env);
   if (method === 'GET' && pathname === '/api/push/key') return readPublicKey(env);
+
+  if (pathname === '/api/availability') {
+    if (method === 'GET') {
+      return listAvailability(request, env, url, Boolean(await operatorFrom(request, env)));
+    }
+    if (method === 'POST') {
+      const operator = await operatorFrom(request, env);
+      if (!operator) return fail(401, 'Connexion requise.');
+      return setAvailability(request, env);
+    }
+  }
   if (method === 'POST' && pathname === '/api/push/track') return registerClientSubscription(request, env);
 
   if (pathname === '/api/missions') {

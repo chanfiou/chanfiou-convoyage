@@ -26,6 +26,71 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+.calendar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.calendar__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.calendar__grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.calendar__header {
+  text-align: center;
+  font-size: var(--font-small);
+  color: var(--color-text-muted);
+  padding: var(--space-xs) 0;
+}
+
+.calendar__day {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+  font-size: var(--font-body);
+}
+
+.calendar__day--muted {
+  opacity: 0.35;
+}
+
+.calendar__day--blocked {
+  background: var(--color-danger-soft);
+  border-color: transparent;
+  color: var(--color-danger);
+  text-decoration: line-through;
+}
+
+.calendar__day--mission {
+  background: var(--color-info-soft);
+  border-color: var(--color-info);
+  color: var(--color-info);
+}
+
+.calendar__day--selected {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-text-inverse);
+  font-weight: 700;
+}
+
+.calendar__day:disabled {
+  cursor: not-allowed;
+}
+
 #splash {
   display: none;
 }

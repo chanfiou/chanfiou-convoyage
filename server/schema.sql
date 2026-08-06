@@ -23,6 +23,14 @@ CREATE TABLE IF NOT EXISTS push_subscriptions (
   created_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS availability (
+  day TEXT NOT NULL,
+  reason TEXT NOT NULL,
+  reference TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL,
+  PRIMARY KEY (day, reference)
+);
+
 CREATE TABLE IF NOT EXISTS client_push (
   endpoint TEXT NOT NULL,
   reference TEXT NOT NULL,

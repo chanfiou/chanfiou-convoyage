@@ -93,3 +93,10 @@ export const sendTestPush = () => request('/api/push/test', { method: 'POST', bo
 
 export const saveClientPushSubscription = (reference, token, subscription) =>
   request('/api/push/track', { method: 'POST', body: { reference, token, subscription } });
+
+export const fetchAvailability = () => request('/api/availability');
+
+export const fetchAvailabilityDetailed = () => request('/api/availability', { authenticated: true });
+
+export const saveAvailability = (day, blocked) =>
+  request('/api/availability', { method: 'POST', body: { day, blocked }, authenticated: true });

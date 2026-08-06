@@ -242,6 +242,9 @@ export const renderAdmin = (params) => {
           <button type="button" class="button button--s button--primary" data-goto="factures">
             ${icon('receipt', 24)} Factures
           </button>
+          <button type="button" class="button button--s button--secondary" data-goto="disponibilites">
+            ${icon('calendar', 24)} Disponibilités
+          </button>
           <button type="button" class="button button--s button--secondary" data-open-settings>
             ${icon('settings', 24)} Réglages
           </button>

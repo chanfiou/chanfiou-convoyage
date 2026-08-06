@@ -11,6 +11,7 @@ import { renderAdmin } from './screens/admin/dashboard.js';
 import { renderInvoices } from './screens/admin/invoices.js';
 import { renderImportRequest } from './screens/import-request.js';
 import { renderLegal } from './screens/legal.js';
+import { renderAvailability } from './screens/admin/availability.js';
 import { startAutoSync } from './data/auto-sync.js';
 import { IS_OPERATOR_HOST } from './config/host.js';
 
@@ -107,6 +108,7 @@ export const startApp = (root) => {
   registerRoute('factures', renderInvoices);
   registerRoute('importer', renderImportRequest);
   registerRoute('mentions', renderLegal);
+  registerRoute('disponibilites', renderAvailability);
 
   onNavigate((route) => highlightActiveTab(tabBar, route.path));
 
