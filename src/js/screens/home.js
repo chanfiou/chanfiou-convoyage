@@ -28,7 +28,7 @@ const serviceCard = (service) => html`
 export const renderHome = () => {
   const { missions } = getState();
   const deliveredCount = missions.filter((mission) =>
-    ['livree', 'facturee'].includes(mission.status),
+    mission.status === 'livree',
   ).length;
   const monthCount = missionsThisMonth(missions).length;
 

@@ -32,9 +32,9 @@ import { openReportSheet } from './report-sheet.js';
 
 const FILTERS = [
   { id: 'toutes', label: 'Toutes' },
-  { id: 'a-traiter', label: 'À traiter', statuses: ['demande', 'confirmee'] },
+  { id: 'a-traiter', label: 'À traiter', statuses: ['demande', 'confirmee', 'facturee'] },
   { id: 'en-cours', label: 'En route', statuses: ['en-cours'] },
-  { id: 'terminees', label: 'Terminées', statuses: ['livree', 'facturee'] },
+  { id: 'terminees', label: 'Terminées', statuses: ['livree'] },
 ];
 
 const gateMarkup = () => html`
@@ -129,7 +129,7 @@ const missionRow = (mission) => {
               ${icon('receipt', 20)} ${invoiceForMission(mission.id) ? 'Voir la facture' : 'Facturer'}
             </button>`
           : ''}
-        ${mission.status !== 'annulee' && mission.status !== 'facturee'
+        ${!['annulee', 'livree'].includes(mission.status)
           ? html`<button type="button" class="button button--xs button--danger" data-cancel="${mission.id}">
               Annuler
             </button>`
@@ -303,7 +303,7 @@ export const renderAdmin = (params) => {
       return;
     }
     const invoice = createInvoiceForMission(mission);
-    if (mission.status !== 'facturee') advanceMissionStatus(mission.id, 'facturee');
+    if (['demande', 'confirmee'].includes(mission.status)) advanceMissionStatus(mission.id, 'facturee');
     showToast(`Facture ${invoice.number} créée.`);
     navigate('factures');
   });

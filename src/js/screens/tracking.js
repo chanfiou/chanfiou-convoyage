@@ -84,13 +84,13 @@ const missionCard = (mission) => {
         <span>Montant ${TOTAL_LABEL.toLowerCase()}</span>
         <span>${formatEuro(mission.quote.totalIncludingVat)}</span>
       </div>
-      ${mission.status === 'confirmee' ? paymentCardMarkup(mission) : ''}
+      ${['confirmee', 'facturee'].includes(mission.status) ? paymentCardMarkup(mission) : ''}
       ${mission.arrivalReport
         ? html`<p class="text-small text-muted">
             Livré le ${formatDateTime(mission.arrivalReport.completedAt)} — procès-verbal signé.
           </p>`
         : ''}
-      ${mission.trackingToken && isConfigured() && !['livree', 'facturee', 'annulee'].includes(mission.status)
+      ${mission.trackingToken && isConfigured() && !['livree', 'annulee'].includes(mission.status)
         ? html`
             <button type="button" class="button button--s button--stroke" data-notify="${mission.id}">
               ${icon('inbox', 20)} M’alerter à chaque étape
