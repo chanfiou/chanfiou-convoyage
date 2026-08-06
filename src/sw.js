@@ -28,7 +28,9 @@ self.addEventListener('install', (event) => {
     caches.open(CACHE_NAME).then(async (cache) => {
       await Promise.all(
         PRECACHED_ASSETS.map(async (asset) => {
-          const response = await fetch(asset, { redirect: 'follow' });
+          // no-cache : revalide auprès du serveur au lieu de reprendre
+          // une éventuelle vieille copie du cache HTTP du navigateur.
+          const response = await fetch(asset, { redirect: 'follow', cache: 'no-cache' });
           if (response.ok) await cache.put(asset, await cleanResponse(response));
         }),
       );
