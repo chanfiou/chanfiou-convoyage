@@ -63,7 +63,7 @@ self.addEventListener('push', (event) => {
         badge: './assets/icon-192.png',
         data: { url: data.url ?? './#/espace' },
       });
-      const clients = await self.clients.matchAll({ type: 'window' });
+      const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
       clients.forEach((client) => client.postMessage({ type: 'sync' }));
     })(),
   );
@@ -75,7 +75,12 @@ self.addEventListener('notificationclick', (event) => {
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
       const open = clients.find((client) => 'focus' in client);
-      if (open) return open.focus();
+      if (open) {
+        // La page était peut-être suspendue à l'arrivée du push : on lui
+        // redonne l'ordre de synchroniser au moment où elle revient devant.
+        open.postMessage({ type: 'sync' });
+        return open.focus();
+      }
       return self.clients.openWindow(url);
     }),
   );

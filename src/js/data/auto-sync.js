@@ -27,6 +27,7 @@ export const startAutoSync = () => {
 
   window.setInterval(run, SYNC_INTERVAL_MS);
   window.addEventListener('online', run);
+  window.addEventListener('focus', run);
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden) run();
   });
