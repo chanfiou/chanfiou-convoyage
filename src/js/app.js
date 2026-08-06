@@ -132,6 +132,15 @@ export const startApp = (root) => {
     navigator.serviceWorker.addEventListener('message', (event) => {
       if (event.data?.type === 'sync') refreshTrackingScreen();
     });
+
+    // Dès qu'une nouvelle version prend le contrôle, la page se recharge
+    // toute seule : une seule ouverture suffit pour être à jour.
+    let reloadingForUpdate = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (reloadingForUpdate) return;
+      reloadingForUpdate = true;
+      window.location.reload();
+    });
   }
 
   const splash = document.getElementById('splash');

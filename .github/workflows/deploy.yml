@@ -40,3 +40,17 @@ jobs:
         working-directory: server
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+      - name: Purger le cache CDN
+        run: |
+          reponse=$(curl -s -X POST "https://api.cloudflare.com/client/v4/zones/5f6479adec5e665894c1199ebc626a8d/purge_cache" \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data '{"purge_everything":true}')
+          if echo "$reponse" | grep -q '"success":true'; then
+            echo "Cache CDN purgé."
+          else
+            echo "::warning::Purge du cache refusée (ajouter la permission Zone > Cache Purge au jeton) : $reponse"
+          fi
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
