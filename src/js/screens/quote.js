@@ -321,7 +321,11 @@ export const renderQuote = (params) => {
       approachDetail.textContent = `Choisissez les deux villes pour estimer le déplacement. Les ${APPROACH_FREE_KILOMETERS} premiers kilomètres sont offerts.`;
       return;
     }
-    approachDetail.textContent = `${HOME_BASE.city} vers ${departure} : ${formatDistance(approachState.outbound)}. ${arrival} vers ${HOME_BASE.city} : ${formatDistance(approachState.inbound)}. Total ${formatDistance(approachState.kilometers)}, dont ${APPROACH_FREE_KILOMETERS} km offerts.`;
+    const allowanceNote =
+      approachState.kilometers <= APPROACH_FREE_KILOMETERS
+        ? `couvert par les ${APPROACH_FREE_KILOMETERS} km offerts, aucun supplément`
+        : `dont ${APPROACH_FREE_KILOMETERS} km offerts`;
+    approachDetail.textContent = `${HOME_BASE.city} vers ${departure} : ${formatDistance(approachState.outbound)}. ${arrival} vers ${HOME_BASE.city} : ${formatDistance(approachState.inbound)}. Total ${formatDistance(approachState.kilometers)}, ${allowanceNote}.`;
   };
 
   const readInput = () => {
