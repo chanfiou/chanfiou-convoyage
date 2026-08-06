@@ -65,7 +65,8 @@ export const renderLegal = () => {
           Ce site n’utilise aucun cookie publicitaire ni outil de suivi. Un stockage local
           strictement technique conserve sur votre appareil vos devis et références de suivi ;
           il reste sur votre appareil et peut être effacé en supprimant les données du site
-          dans votre navigateur.
+          dans votre navigateur. La recherche de villes interroge l’annuaire public
+          geo.api.gouv.fr ; seules les lettres saisies du nom de ville lui sont transmises.
         </p>
       </section>
     </div>

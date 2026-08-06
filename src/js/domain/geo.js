@@ -25,7 +25,66 @@ export const searchCities = (query) => {
   return [...startsWith, ...contains].slice(0, MAX_SUGGESTIONS);
 };
 
+// Les villes choisies via l'API officielle des communes sont mémorisées sur
+// l'appareil pour que les distances restent calculables après rechargement.
+const REGISTRY_KEY = 'chanfiou.cities.v1';
+const hasStorage = typeof window !== 'undefined' && 'localStorage' in window;
+
+const loadRegistry = () => {
+  if (!hasStorage) return new Map();
+  try {
+    return new Map(JSON.parse(window.localStorage.getItem(REGISTRY_KEY) ?? '[]'));
+  } catch {
+    return new Map();
+  }
+};
+
+const registry = loadRegistry();
+
+const persistRegistry = () => {
+  if (!hasStorage) return;
+  try {
+    window.localStorage.setItem(REGISTRY_KEY, JSON.stringify([...registry.entries()].slice(-80)));
+  } catch {
+    return;
+  }
+};
+
+export const rememberCities = (cities) => {
+  cities.forEach((city) => registry.set(city.label, city));
+  persistRegistry();
+};
+
+export const searchCitiesRemote = async (query) => {
+  const needle = String(query ?? '').trim();
+  if (needle.length < 2) return [];
+  const params = /^\d{4,5}$/.test(needle)
+    ? `codePostal=${encodeURIComponent(needle)}`
+    : `nom=${encodeURIComponent(needle)}&boost=population`;
+  try {
+    const response = await fetch(
+      `https://geo.api.gouv.fr/communes?${params}&fields=nom,codeDepartement,centre&limit=${MAX_SUGGESTIONS}`,
+    );
+    if (!response.ok) return [];
+    const communes = await response.json();
+    const cities = communes
+      .filter((commune) => commune.centre?.coordinates)
+      .map((commune) => ({
+        name: commune.nom,
+        dept: commune.codeDepartement,
+        lat: commune.centre.coordinates[1],
+        lon: commune.centre.coordinates[0],
+        label: `${commune.nom} (${commune.codeDepartement})`,
+      }));
+    rememberCities(cities);
+    return cities;
+  } catch {
+    return [];
+  }
+};
+
 export const findCityByLabel = (label) =>
+  registry.get(label) ??
   indexedCities.find((city) => city.label === label) ??
   indexedCities.find((city) => normalizeText(city.name) === normalizeText(label ?? ''));
 

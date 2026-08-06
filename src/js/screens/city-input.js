@@ -1,5 +1,5 @@
 import { escapeHtml, html } from '../core/dom.js';
-import { searchCities } from '../domain/geo.js';
+import { searchCities, searchCitiesRemote } from '../domain/geo.js';
 
 export const cityFieldMarkup = ({ name, label, placeholder, value = '' }) => html`
   <div class="field autocomplete" data-city-field="${name}">
@@ -46,8 +46,20 @@ export const bindCityField = (root, name, onSelected) => {
     list.hidden = false;
   };
 
+  let remoteTimer = null;
+
   input.addEventListener('input', () => {
+    // La liste locale répond immédiatement (et sert de secours hors-ligne) ;
+    // l'annuaire officiel des communes complète 250 ms plus tard.
     openList(searchCities(input.value));
+    window.clearTimeout(remoteTimer);
+    const requested = input.value;
+    remoteTimer = window.setTimeout(async () => {
+      const remote = await searchCitiesRemote(requested);
+      if (remote.length === 0) return;
+      if (input.value !== requested || document.activeElement !== input) return;
+      openList(remote);
+    }, 250);
   });
 
   input.addEventListener('blur', () => {
