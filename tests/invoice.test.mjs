@@ -128,13 +128,14 @@ test('les missions sont regroupées par client et par mois', () => {
     { id: 'c', reference: 'R3', status: 'livree', company: 'Garage Nord', pickupDate: '2026-09-02', quote: { totalExcludingVat: 250 } },
     { id: 'd', reference: 'R4', status: 'livree', company: 'Loueur Sud', pickupDate: '2026-08-11', quote: { totalExcludingVat: 400 } },
     { id: 'e', reference: 'R5', status: 'confirmee', company: 'Garage Nord', pickupDate: '2026-08-25', quote: { totalExcludingVat: 100 } },
+    { id: 'f', reference: 'R6', status: 'demande', company: 'Garage Nord', pickupDate: '2026-08-27', quote: { totalExcludingVat: 150 } },
   ];
   const groupes = groupInvoiceableMissions(missions, []);
   const aout = groupes.find((g) => g.client === 'Garage Nord' && g.period === '2026-08');
-  assert.equal(aout.missions.length, 2, 'seules les missions livrées d’août');
+  assert.equal(aout.missions.length, 3, 'les missions confirmées ou livrées d’août, pas les demandes');
   assert.ok(groupes.some((g) => g.client === 'Garage Nord' && g.period === '2026-09'));
   assert.ok(groupes.some((g) => g.client === 'Loueur Sud'));
-  assert.equal(groupes.reduce((sum, g) => sum + g.missions.length, 0), 4);
+  assert.equal(groupes.reduce((sum, g) => sum + g.missions.length, 0), 5);
 });
 
 test('une mission déjà facturée sort des regroupements', () => {
