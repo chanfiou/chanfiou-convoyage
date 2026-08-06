@@ -203,17 +203,14 @@ export const renderQuote = (params) => {
 
       <section class="card">
         <h2 class="card-title">Déplacement du convoyeur</h2>
-        <label class="option ${input.includeApproach ? 'option--selected' : ''}">
-          <input type="checkbox" name="includeApproach" ${input.includeApproach ? 'checked' : ''} />
-          <span class="option__body">
-            <span class="option__label">
-              Facturer l’approche et le retour depuis ${escapeHtml(HOME_BASE.city)}
-            </span>
-            <span class="text-small text-muted" data-approach-detail>
-              Les ${APPROACH_FREE_KILOMETERS} premiers kilomètres sont offerts.
-            </span>
-          </span>
-        </label>
+        <p class="text-small">
+          ${icon('check', 16)} L’approche et le retour depuis ${escapeHtml(HOME_BASE.city)} sont
+          déjà compris dans le prix affiché — les ${APPROACH_FREE_KILOMETERS} premiers kilomètres
+          sont offerts.
+        </p>
+        <p class="text-small text-muted" data-approach-detail>
+          Choisissez les deux villes pour voir le détail du déplacement.
+        </p>
       </section>
 
       <section class="card">
@@ -314,7 +311,7 @@ export const renderQuote = (params) => {
       approachState.outbound = 0;
       approachState.inbound = 0;
       approachState.kilometers = 0;
-      approachDetail.textContent = `Une des deux villes n’est pas dans ma base. Choisissez une ville dans la liste proposée pour que le déplacement soit facturé.`;
+      approachDetail.textContent = `Une des deux villes n’est pas dans ma base. Choisissez une ville dans la liste proposée pour que le déplacement soit calculé.`;
       return;
     }
     approachState.outbound = outbound ?? 0;
@@ -335,7 +332,7 @@ export const renderQuote = (params) => {
       departure: view.querySelector('#city-departure').value.trim(),
       arrival: view.querySelector('#city-arrival').value.trim(),
       kilometers: Number(distanceInput.value) || 0,
-      includeApproach: view.querySelector('input[name="includeApproach"]').checked,
+      includeApproach: true,
       approachKilometers: approachState.kilometers,
       distanceIsManual: input.distanceIsManual,
       vehicleId: view.querySelector('input[name="vehicleId"]:checked').value,
