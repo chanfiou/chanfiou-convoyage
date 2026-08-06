@@ -23,7 +23,7 @@ export const VEHICLE_CATEGORIES = [
 
 export const HOME_BASE = { label: 'Paris (75)', city: 'Paris' };
 export const APPROACH_PRICE_PER_KM = 0.14;
-export const APPROACH_FREE_KILOMETERS = 150;
+export const APPROACH_FREE_KILOMETERS = 100;
 export const APPROACH_MAX_FEE = 120;
 
 export const URGENCY_LEVELS = [
