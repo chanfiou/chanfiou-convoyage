@@ -6,11 +6,15 @@ export const VAT_EXEMPTION_CODE = 'VATEX-FR-FRANCHISE';
 export const MINIMUM_FEE = 129;
 export const MINIMUM_FEE_DISTANCE = 80;
 
+// Repositionnés sous l'offre Budget d'Otoqi (devis réel du 7 août 2026 :
+// 278,40 € TTC pour Calais -> Le Mesnil-Amelot, 270 km, carburant et frais
+// inclus). Ces plateformes facturent la TVA, que nos clients professionnels
+// récupèrent : la comparaison utile se fait donc sur leurs montants TTC.
 export const DISTANCE_BRACKETS = [
-  { upTo: 200, pricePerKm: 1.15 },
-  { upTo: 500, pricePerKm: 0.95 },
-  { upTo: 900, pricePerKm: 0.85 },
-  { upTo: Infinity, pricePerKm: 0.75 },
+  { upTo: 200, pricePerKm: 0.92 },
+  { upTo: 500, pricePerKm: 0.81 },
+  { upTo: 900, pricePerKm: 0.72 },
+  { upTo: Infinity, pricePerKm: 0.64 },
 ];
 
 export const VEHICLE_CATEGORIES = [

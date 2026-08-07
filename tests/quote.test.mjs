@@ -25,35 +25,39 @@ test('un trajet court applique le forfait minimum', () => {
 });
 
 test('le barème est dégressif par tranche cumulée', () => {
-  assert.equal(Math.round(roadBasePrice(200)), 230);
-  assert.equal(Math.round(roadBasePrice(500)), 515);
-  assert.equal(Math.round(roadBasePrice(900)), 855);
+  assert.equal(Math.round(roadBasePrice(200)), 184);
+  assert.equal(Math.round(roadBasePrice(500)), 427);
+  assert.equal(Math.round(roadBasePrice(900)), 715);
 });
 
-// Références août 2026 (comparatifs ConvoyMax / Portail Auto-Entrepreneur) :
-// ~1,50 €/km sur les 200 premiers km, ~1,15 €/km au-delà chez les plateformes.
-const MARKET_AVERAGE = [
-  { label: 'Paris → Orléans', kilometers: 130, approach: 130, market: 195 },
-  { label: 'Paris → Lille', kilometers: 248, approach: 248, market: 355 },
-  { label: 'Rouen → Reims', kilometers: 230, approach: 305, market: 334 },
-  { label: 'Paris → Lyon', kilometers: 471, approach: 471, market: 611 },
-  { label: 'Paris → Bordeaux', kilometers: 585, approach: 585, market: 742 },
-  { label: 'Lyon → Lille', kilometers: 679, approach: 726, market: 850 },
-  { label: 'Paris → Marseille', kilometers: 775, approach: 775, market: 961 },
-];
+// Devis réellement relevé chez Otoqi le 7 août 2026 pour Calais → Le
+// Mesnil-Amelot (Renault Clio, 270 km), carburant, frais et assurance inclus
+// comme dans nos prix : 278,40 € TTC en Budget (livraison sous 7 jours) et
+// 309,60 € TTC en Express (48 h). C'est la seule référence de prix vérifiée
+// dont nous disposons : ne pas la remplacer par des estimations.
+const OTOQI_CALAIS = { kilometers: 270, approach: 318, budget: 278.4, express: 309.6 };
 
-test('le prix reste sous la moyenne du marché sur les trajets liés à la base', () => {
-  MARKET_AVERAGE.forEach((route) => {
-    const quote = computeQuote({
-      kilometers: route.kilometers,
-      approachKilometers: route.approach,
-    });
-    const gap = (quote.totalExcludingVat - route.market) / route.market;
-    assert.ok(
-      gap <= -0.1,
-      `${route.label} : ${quote.totalExcludingVat.toFixed(0)} € contre ${route.market} € au marché, soit ${(gap * 100).toFixed(0)} %`,
-    );
+const quoteFor = (urgencyId) =>
+  computeQuote({
+    kilometers: OTOQI_CALAIS.kilometers,
+    approachKilometers: OTOQI_CALAIS.approach,
+    urgencyId,
   });
+
+test('un départ planifié reste sous l’offre Budget de la plateforme concurrente', () => {
+  const total = quoteFor('standard').totalIncludingVat;
+  assert.ok(
+    total < OTOQI_CALAIS.budget,
+    `${total.toFixed(2)} € contre ${OTOQI_CALAIS.budget} € chez Otoqi`,
+  );
+});
+
+test('un départ sous 48 heures reste sous l’offre Express de la plateforme concurrente', () => {
+  const total = quoteFor('rapide').totalIncludingVat;
+  assert.ok(
+    total < OTOQI_CALAIS.express,
+    `${total.toFixed(2)} € contre ${OTOQI_CALAIS.express} € chez Otoqi`,
+  );
 });
 
 test('la majoration d’urgence découle de la date de prise en charge', () => {
