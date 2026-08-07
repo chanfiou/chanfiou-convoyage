@@ -85,7 +85,7 @@ export const contractMarkup = (mission) => {
       </section>
 
       <section class="invoice-document__section">
-        <h3>Acceptation</h3>
+        <h3>Acceptation et signature</h3>
         <p>
           ${mission.termsAcceptedAt
             ? `Conditions acceptées en ligne par le client le ${formatDateTime(mission.termsAcceptedAt)}${
@@ -95,6 +95,21 @@ export const contractMarkup = (mission) => {
           Les procès-verbaux signés de prise en charge et de livraison sont annexés au présent
           contrat.
         </p>
+        ${mission.contractSignedAt
+          ? html`
+              <p>
+                Contrat signé électroniquement le ${formatDateTime(mission.contractSignedAt)} par
+                ${escapeHtml(mission.contractSignatoryName ?? 'le client')}.
+              </p>
+              ${mission.contractSignature
+                ? html`<img
+                    src="${mission.contractSignature}"
+                    alt="Signature du client"
+                    style="max-width: 240px; background: #ffffff; border-radius: 8px;"
+                  />`
+                : ''}
+            `
+          : html`<p>En attente de la signature du client.</p>`}
       </section>
     </article>
   `;

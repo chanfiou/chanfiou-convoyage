@@ -34,7 +34,17 @@ const CLIENT_VISIBLE_FIELDS = [
   'plate',
   'departureReport',
   'arrivalReport',
+  'termsAcceptedAt',
+  'termsVersion',
+  'contractSignedAt',
+  'contractSignatoryName',
+  'contractSignature',
+  'invoice',
 ];
+
+// Champs que seul le client alimente : ils ne doivent jamais être écrasés
+// par une mise à jour venue du convoyeur.
+const CLIENT_OWNED_FIELDS = ['contractSignedAt', 'contractSignatoryName', 'contractSignature'];
 
 const json = (data, status = 200, extraHeaders = {}) =>
   new Response(JSON.stringify(data), {
@@ -171,6 +181,54 @@ const readRequest = async (request, env, url) => {
   return json({ mission: publicView(rowToMission(row)) });
 };
 
+// Signature du contrat par le client, authentifiée par son jeton de suivi.
+const signContract = async (request, env, ctx) => {
+  const { body, error } = await readJson(request);
+  if (error) return fail(400, error);
+
+  const reference = String(body?.reference ?? '').trim();
+  const signature = String(body?.signature ?? '');
+  const signatoryName = String(body?.signatoryName ?? '').trim();
+  if (!reference || !signature.startsWith('data:image/') || !signatoryName) {
+    return fail(422, 'Signature ou nom du signataire manquant.');
+  }
+
+  const row = await env.DB.prepare('SELECT * FROM missions WHERE reference = ?1').bind(reference).first();
+  if (!row) return fail(404, 'Référence inconnue.');
+  if (!timingSafeEqual(String(body?.token ?? ''), row.client_token)) {
+    return fail(403, 'Jeton de suivi invalide.');
+  }
+  if (row.status === 'demande') {
+    return fail(409, 'Le contrat est signable dès la confirmation du convoyage.');
+  }
+
+  const payload = JSON.parse(row.payload);
+  if (payload.contractSignedAt) {
+    return json({ contractSignedAt: payload.contractSignedAt, alreadySigned: true });
+  }
+
+  const signedAt = new Date().toISOString();
+  const stored = {
+    ...payload,
+    contractSignedAt: signedAt,
+    contractSignatoryName: signatoryName,
+    contractSignature: signature,
+  };
+  await env.DB.prepare('UPDATE missions SET payload = ?1, updated_at = ?2 WHERE reference = ?3')
+    .bind(JSON.stringify(stored), signedAt, reference)
+    .run();
+
+  ctx?.waitUntil(
+    notifySubscriptions(env, {
+      title: 'Contrat signé',
+      body: `${reference} — ${signatoryName} a signé le contrat. Vous pouvez facturer.`,
+      url: './#/espace',
+    }),
+  );
+
+  return json({ contractSignedAt: signedAt });
+};
+
 const openSession = async (request, env) => {
   const { body, error } = await readJson(request);
   if (error) return fail(400, error);
@@ -227,6 +285,13 @@ const upsertMission = async (request, env, ctx) => {
   const createdAt = existing?.created_at ?? mission.createdAt ?? now;
   const stored = { ...mission, id, reference: mission.reference };
 
+  if (existing) {
+    const previous = JSON.parse(existing.payload);
+    CLIENT_OWNED_FIELDS.forEach((field) => {
+      if (previous[field] !== undefined) stored[field] = previous[field];
+    });
+  }
+
   await env.DB.prepare(
     'INSERT INTO missions (id, reference, client_token, status, origin, created_at, updated_at, payload) ' +
       'VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8) ' +
@@ -280,6 +345,7 @@ const routes = async (request, env, url, ctx) => {
     }
   }
   if (method === 'POST' && pathname === '/api/push/track') return registerClientSubscription(request, env);
+  if (method === 'POST' && pathname === '/api/contract-signature') return signContract(request, env, ctx);
 
   if (pathname === '/api/missions') {
     const operator = await operatorFrom(request, env);

@@ -2,6 +2,7 @@ import { escapeHtml, html, icon, onClick } from '../../core/dom.js';
 import { openSheet, showToast } from '../../core/ui.js';
 import { CHECKLIST_ITEMS, updateMission } from '../../domain/mission.js';
 import { isConfigured, isSignedIn, uploadReportPhoto } from '../../data/api.js';
+import { bindSignaturePad } from '../signature-pad.js';
 
 const MAX_PHOTOS = 12;
 // Les photos partent sur le stockage distant : on peut viser une vraie
@@ -27,53 +28,6 @@ const readImageAsThumbnail = (file) =>
     };
     reader.readAsDataURL(file);
   });
-
-const bindSignaturePad = (canvas) => {
-  const context = canvas.getContext('2d');
-  const ratio = window.devicePixelRatio || 1;
-  canvas.width = canvas.offsetWidth * ratio;
-  canvas.height = canvas.offsetHeight * ratio;
-  context.scale(ratio, ratio);
-  context.lineWidth = 2;
-  context.lineCap = 'round';
-  context.strokeStyle = '#eaf0f6';
-
-  let drawing = false;
-  let hasContent = false;
-
-  const positionOf = (event) => {
-    const bounds = canvas.getBoundingClientRect();
-    return { x: event.clientX - bounds.left, y: event.clientY - bounds.top };
-  };
-
-  canvas.addEventListener('pointerdown', (event) => {
-    drawing = true;
-    hasContent = true;
-    canvas.setPointerCapture(event.pointerId);
-    const point = positionOf(event);
-    context.beginPath();
-    context.moveTo(point.x, point.y);
-  });
-
-  canvas.addEventListener('pointermove', (event) => {
-    if (!drawing) return;
-    const point = positionOf(event);
-    context.lineTo(point.x, point.y);
-    context.stroke();
-  });
-
-  canvas.addEventListener('pointerup', () => {
-    drawing = false;
-  });
-
-  return {
-    clear: () => {
-      context.clearRect(0, 0, canvas.width, canvas.height);
-      hasContent = false;
-    },
-    toDataUrl: () => (hasContent ? canvas.toDataURL('image/png') : null),
-  };
-};
 
 const checklistMarkup = (existing) => html`
   <div class="option-list">
@@ -208,6 +162,22 @@ export const openReportSheet = (mission, stage, onSaved) => {
       return;
     }
 
+    // Le procès-verbal n'a de valeur que contradictoire : signature du client
+    // et nom du signataire sont obligatoires.
+    const signatureDataUrl = signature.toDataUrl() ?? existing?.signature ?? null;
+    if (!signatureDataUrl) {
+      errorLine.hidden = false;
+      errorLine.innerHTML = `${icon('alert', 16)} Faites signer le client dans le cadre prévu : sans signature, le procès-verbal n’est pas opposable.`;
+      root.querySelector('[data-signature]').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    if (!String(data.signatoryName ?? '').trim()) {
+      errorLine.hidden = false;
+      errorLine.innerHTML = `${icon('alert', 16)} Indiquez le nom du signataire.`;
+      root.querySelector('#signatoryName').focus();
+      return;
+    }
+
     // Les photos encore locales partent vers le stockage distant : la mission
     // synchronisée ne contient plus que des adresses, jamais les images.
     const submitButton = form.querySelector('button[type="submit"]');
@@ -240,7 +210,7 @@ export const openReportSheet = (mission, stage, onSaved) => {
       fuelLevel: data.fuelLevel,
       damages: String(data.damages ?? '').trim(),
       signatoryName: String(data.signatoryName ?? '').trim(),
-      signature: signature.toDataUrl() ?? existing?.signature ?? null,
+      signature: signatureDataUrl,
       photos,
       checklist: Object.fromEntries(CHECKLIST_ITEMS.map((item) => [item.id, checkedItems.includes(item.id)])),
     };

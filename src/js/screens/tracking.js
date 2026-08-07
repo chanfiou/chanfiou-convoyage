@@ -8,16 +8,56 @@ import { getState, setState } from '../core/store.js';
 import { navigate, refresh } from '../core/router.js';
 import { MISSION_STATUSES, findMissionByReference, statusById } from '../domain/mission.js';
 import { TOTAL_LABEL } from '../domain/vat.js';
-import { fetchTrackedMission, isConfigured, saveClientPushSubscription } from '../data/api.js';
+import {
+  fetchTrackedMission,
+  isConfigured,
+  saveClientPushSubscription,
+  signContract,
+} from '../data/api.js';
+import { bindSignaturePad } from './signature-pad.js';
+import { invoiceDocumentMarkup, printInvoice } from './admin/invoice-document.js';
 import { updateMission } from '../domain/mission.js';
 import { subscribeToPush } from '../domain/push-client.js';
 
 const TRACKED_STATUSES = MISSION_STATUSES.filter((status) => status.id !== 'annulee');
 
+const contractSignatureCardMarkup = (mission) => html`
+  <div class="card card--accent stack-sm" data-contract-card>
+    <h3 class="card-title">${icon('receipt', 20)} Signature de votre contrat</h3>
+    <p class="text-small text-muted">
+      Votre convoyage est confirmé. Relisez le contrat, signez-le dans le cadre ci-dessous : votre
+      facture est émise dès la signature.
+    </p>
+    <button type="button" class="button button--s button--stroke" data-doc="contract" data-doc-mission="${mission.id}">
+      Lire le contrat de convoyage
+    </button>
+    <div class="field">
+      <label class="field__label" for="contractSignatory">Nom du signataire</label>
+      <input class="input" id="contractSignatory" type="text" value="${escapeHtml(mission.contactName ?? '')}" />
+    </div>
+    <div class="field">
+      <span class="field__label">Votre signature</span>
+      <canvas class="signature-pad" data-contract-signature></canvas>
+      <button type="button" class="button button--xs button--link" data-clear-contract-signature>
+        Effacer la signature
+      </button>
+    </div>
+    <p class="field__error" data-contract-error hidden></p>
+    <button type="button" class="button button--m button--primary" data-sign-contract="${mission.id}">
+      ${icon('check', 24)} Signer le contrat
+    </button>
+  </div>
+`;
+
 const stepDocumentMarkup = (mission, statusId) => {
   if (statusId === 'confirmee' && mission.termsAcceptedAt && mission.status !== 'demande') {
     return html`<button type="button" class="button button--xs button--stroke" data-doc="contract" data-doc-mission="${mission.id}">
-      ${icon('receipt', 16)} Voir le contrat de convoyage
+      ${icon('receipt', 16)} ${mission.contractSignedAt ? 'Contrat signé' : 'Voir le contrat de convoyage'}
+    </button>`;
+  }
+  if (statusId === 'facturee' && mission.invoice) {
+    return html`<button type="button" class="button button--xs button--stroke" data-doc="invoice" data-doc-mission="${mission.id}">
+      ${icon('receipt', 16)} Facture ${escapeHtml(mission.invoice.number ?? '')}
     </button>`;
   }
   if (statusId === 'etat-des-lieux' && mission.departureReport) {
@@ -71,8 +111,13 @@ const paymentCardMarkup = (mission) => html`
     </p>
     <div class="price-summary__line price-summary__line--total">
       <span>Montant à régler</span>
-      <span>${formatEuro(mission.quote.totalIncludingVat)}</span>
+      <span>${formatEuro(mission.invoice?.totals?.duePayable ?? mission.quote.totalIncludingVat)}</span>
     </div>
+    ${mission.invoice
+      ? html`<button type="button" class="button button--s button--stroke" data-doc="invoice" data-doc-mission="${mission.id}">
+          ${icon('download', 20)} Facture ${escapeHtml(mission.invoice.number ?? '')} en PDF
+        </button>`
+      : html`<p class="text-small text-muted">Votre facture arrive dans les instants qui suivent.</p>`}
     <p class="text-small">Bénéficiaire : <strong>${escapeHtml(PAYMENT.holder)}</strong></p>
     <p class="text-small">IBAN : <strong>${escapeHtml(groupedIban(PAYMENT.iban))}</strong></p>
     <p class="text-small">BIC : <strong>${escapeHtml(PAYMENT.bic)}</strong></p>
@@ -106,7 +151,12 @@ const missionCard = (mission) => {
         <span>Montant ${TOTAL_LABEL.toLowerCase()}</span>
         <span>${formatEuro(mission.quote.totalIncludingVat)}</span>
       </div>
-      ${['confirmee', 'facturee'].includes(mission.status) ? paymentCardMarkup(mission) : ''}
+      ${['confirmee', 'facturee'].includes(mission.status) && !mission.contractSignedAt
+        ? contractSignatureCardMarkup(mission)
+        : ''}
+      ${['confirmee', 'facturee'].includes(mission.status) && mission.contractSignedAt
+        ? paymentCardMarkup(mission)
+        : ''}
       ${mission.arrivalReport
         ? html`<p class="text-small text-muted">
             Livré le ${formatDateTime(mission.arrivalReport.completedAt)} — procès-verbal signé.
@@ -186,8 +236,18 @@ export const renderTracking = (params) => {
     );
     if (!docMission) return;
     const kind = target.dataset.doc;
-    const title = kind === 'contract' ? `Contrat ${docMission.reference}` : pvTitle(kind);
-    const body = kind === 'contract' ? contractMarkup(docMission) : pvMarkup(docMission, kind);
+    const title =
+      kind === 'contract'
+        ? `Contrat ${docMission.reference}`
+        : kind === 'invoice'
+          ? `Facture ${docMission.invoice?.number ?? ''}`
+          : pvTitle(kind);
+    const body =
+      kind === 'contract'
+        ? contractMarkup(docMission)
+        : kind === 'invoice'
+          ? invoiceDocumentMarkup(docMission.invoice)
+          : pvMarkup(docMission, kind);
     const sheet = openSheet(
       title,
       html`
@@ -200,10 +260,53 @@ export const renderTracking = (params) => {
       `,
     );
     onClick(sheet.element, '[data-print-doc]', () => {
-      const printed = kind === 'contract' ? printContract(docMission) : printPv(docMission, kind);
+      const printed =
+        kind === 'contract'
+          ? printContract(docMission)
+          : kind === 'invoice'
+            ? printInvoice(docMission.invoice)
+            : printPv(docMission, kind);
       if (!printed) showToast('Autorisez les fenêtres surgissantes pour imprimer.', 'danger');
     });
   });
+
+  const contractCard = view.querySelector('[data-contract-card]');
+  if (contractCard) {
+    const pad = bindSignaturePad(contractCard.querySelector('[data-contract-signature]'));
+    const contractError = contractCard.querySelector('[data-contract-error]');
+    onClick(contractCard, '[data-clear-contract-signature]', () => pad.clear());
+    onClick(contractCard, '[data-sign-contract]', async (target) => {
+      const signed = (getState().missions ?? []).find((entry) => entry.id === target.dataset.signContract);
+      if (!signed?.trackingToken) return;
+      const signatoryName = contractCard.querySelector('#contractSignatory').value.trim();
+      const showError = (text) => {
+        contractError.hidden = false;
+        contractError.innerHTML = `${icon('alert', 16)} ${escapeHtml(text)}`;
+      };
+      if (pad.isEmpty()) return showError('Signez dans le cadre avant de valider.');
+      if (!signatoryName) return showError('Indiquez le nom du signataire.');
+
+      target.disabled = true;
+      const { data, error } = await signContract(
+        signed.reference,
+        signed.trackingToken,
+        pad.toDataUrl(),
+        signatoryName,
+      );
+      if (error) {
+        target.disabled = false;
+        showError(error);
+        return;
+      }
+      updateMission(signed.id, {
+        contractSignedAt: data.contractSignedAt,
+        contractSignatoryName: signatoryName,
+        contractSignature: pad.toDataUrl(),
+      });
+      showToast('Contrat signé. Votre facture arrive.');
+      refresh();
+    });
+  }
 
   onClick(view, '[data-copy-iban]', async () => {
     try {
@@ -249,15 +352,20 @@ export const renderTracking = (params) => {
         const { data, error } = await fetchTrackedMission(entry.reference, entry.trackingToken);
         if (error || !data?.mission) return false;
         const distant = data.mission;
-        const reportsChanged =
+        const documentsChanged =
           Boolean(distant.departureReport) !== Boolean(entry.departureReport) ||
-          Boolean(distant.arrivalReport) !== Boolean(entry.arrivalReport);
-        if ((!distant.status || distant.status === entry.status) && !reportsChanged) return false;
+          Boolean(distant.arrivalReport) !== Boolean(entry.arrivalReport) ||
+          (distant.invoice?.number ?? null) !== (entry.invoice?.number ?? null) ||
+          (distant.contractSignedAt ?? null) !== (entry.contractSignedAt ?? null);
+        if ((!distant.status || distant.status === entry.status) && !documentsChanged) return false;
         updateMission(entry.id, {
           status: distant.status ?? entry.status,
           history: distant.history ?? entry.history,
           departureReport: distant.departureReport ?? entry.departureReport ?? null,
           arrivalReport: distant.arrivalReport ?? entry.arrivalReport ?? null,
+          invoice: distant.invoice ?? entry.invoice ?? null,
+          contractSignedAt: distant.contractSignedAt ?? entry.contractSignedAt ?? null,
+          contractSignatoryName: distant.contractSignatoryName ?? entry.contractSignatoryName ?? null,
         });
         // Demande confirmée : le devis qui lui a donné naissance est nettoyé.
         if (entry.status === 'demande' && distant.status !== 'demande') {

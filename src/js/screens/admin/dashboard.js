@@ -1,6 +1,6 @@
 import { COMPANY } from '../../config/company.js';
 import { escapeHtml, html, icon, onClick } from '../../core/dom.js';
-import { formatDate, formatEuroRounded } from '../../core/format.js';
+import { formatDate, formatDateTime, formatEuroRounded } from '../../core/format.js';
 import { emptyState, fromHtml, openSheet, showToast } from '../../core/ui.js';
 import { contractMarkup, printContract } from '../contract-document.js';
 import { getState, resetState, setState } from '../../core/store.js';
@@ -11,6 +11,7 @@ import {
   missionRevenue,
   missionsThisMonth,
   statusById,
+  updateMission,
 } from '../../domain/mission.js';
 import { BASE_SUFFIX } from '../../domain/vat.js';
 import { createInvoiceForMission, invoiceForMission } from '../../domain/invoice.js';
@@ -108,6 +109,16 @@ const missionRow = (mission) => {
             <button type="button" class="button button--xs button--link" data-unchain="${mission.id}">
               Annuler le chaînage
             </button>
+          </p>`
+        : ''}
+      ${['confirmee', 'facturee'].includes(mission.status)
+        ? html`<p class="text-small ${mission.contractSignedAt ? 'text-accent' : 'field__error'}">
+            ${mission.contractSignedAt
+              ? html`${icon('check', 16)} Contrat signé par
+                  ${escapeHtml(mission.contractSignatoryName ?? 'le client')} le
+                  ${formatDateTime(mission.contractSignedAt)}`
+              : html`${icon('alert', 16)} Contrat en attente de signature du client — facturation
+                  bloquée.`}
           </p>`
         : ''}
       <div class="row row--wrap">
@@ -311,9 +322,20 @@ export const renderAdmin = (params) => {
       openSettingsSheet(reload);
       return;
     }
+    // Pas de facture sans contrat signé par le client.
+    if (!invoiceForMission(mission.id) && !mission.contractSignedAt) {
+      showToast(
+        'Le client n’a pas encore signé le contrat. La facture ne peut pas être émise.',
+        'danger',
+      );
+      return;
+    }
     const invoice = createInvoiceForMission(mission);
+    // La facture voyage avec la mission : le client la retrouve dans son suivi.
+    updateMission(mission.id, { invoice });
     if (['demande', 'confirmee'].includes(mission.status)) advanceMissionStatus(mission.id, 'facturee');
-    showToast(`Facture ${invoice.number} créée.`);
+    marquerASynchroniser(mission.id);
+    showToast(`Facture ${invoice.number} créée et transmise au client.`);
     navigate('factures');
   });
   onClick(view, '[data-chain]', (target) => {
@@ -383,13 +405,18 @@ export const renderAdmin = (params) => {
   onClick(view, '[data-advance]', (target) => {
     const mission = getState().missions.find((entry) => entry.id === target.dataset.advance);
     const next = target.dataset.next;
-    if (next === 'en-cours' && mission && !mission.departureReport) {
-      showToast('Établissez d’abord l’état des lieux de prise en charge.', 'danger');
+    // Chaque étape a son garde-fou documentaire.
+    if (next === 'facturee' && mission && !mission.contractSignedAt) {
+      showToast('Le client doit d’abord signer son contrat de convoyage.', 'danger');
+      return;
+    }
+    if (next === 'en-cours' && mission && !mission.departureReport?.signature) {
+      showToast('État des lieux de prise en charge à faire signer par le client.', 'danger');
       openReportSheet(mission, 'departure', reload);
       return;
     }
-    if (next === 'livree' && mission && !mission.arrivalReport) {
-      showToast('Établissez d’abord le PV de livraison.', 'danger');
+    if (next === 'livree' && mission && !mission.arrivalReport?.signature) {
+      showToast('PV de livraison à faire signer par le client.', 'danger');
       openReportSheet(mission, 'arrival', reload);
       return;
     }
