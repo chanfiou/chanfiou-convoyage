@@ -15,6 +15,7 @@ import {
   setAvailability,
   unblockDayForMission,
 } from './availability.js';
+import { servePhoto, uploadPhoto } from './photos.js';
 
 const SESSION_DURATION_SECONDS = 60 * 60 * 24 * 30;
 const MAX_PAYLOAD_BYTES = 512 * 1024;
@@ -260,6 +261,13 @@ const routes = async (request, env, url, ctx) => {
   if (method === 'GET' && pathname.startsWith('/api/requests/')) return readRequest(request, env, url);
   if (method === 'POST' && pathname === '/api/session') return openSession(request, env);
   if (method === 'GET' && pathname === '/api/push/key') return readPublicKey(env);
+
+  if (method === 'GET' && pathname.startsWith('/api/photos/')) return servePhoto(env, pathname);
+  if (method === 'POST' && pathname === '/api/photos') {
+    const operator = await operatorFrom(request, env);
+    if (!operator) return fail(401, 'Connexion requise.');
+    return uploadPhoto(request, env, url);
+  }
 
   if (pathname === '/api/availability') {
     if (method === 'GET') {

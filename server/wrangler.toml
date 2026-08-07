@@ -12,5 +12,9 @@ binding = "DB"
 database_name = "chanfiou-convoyage"
 database_id = "34acc055-166b-433a-ad84-c1fa4eb3fd28"
 
+[[r2_buckets]]
+binding = "PHOTOS"
+bucket_name = "chanfiou-photos"
+
 [vars]
 ALLOWED_ORIGIN = "https://chanfiou-convoyage.fr,https://convoyeur.chanfiou-convoyage.fr,https://www.chanfiou-convoyage.fr,https://chanfiou-convoyage.pages.dev"

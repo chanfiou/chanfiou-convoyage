@@ -1,9 +1,12 @@
 import { escapeHtml, html, icon, onClick } from '../../core/dom.js';
 import { openSheet, showToast } from '../../core/ui.js';
 import { CHECKLIST_ITEMS, updateMission } from '../../domain/mission.js';
+import { isConfigured, isSignedIn, uploadReportPhoto } from '../../data/api.js';
 
 const MAX_PHOTOS = 12;
-const PHOTO_MAX_SIZE = 640;
+// Les photos partent sur le stockage distant : on peut viser une vraie
+// qualité de preuve sans alourdir la synchronisation.
+const PHOTO_MAX_SIZE = 1280;
 
 const readImageAsThumbnail = (file) =>
   new Promise((resolve, reject) => {
@@ -18,7 +21,7 @@ const readImageAsThumbnail = (file) =>
         canvas.width = Math.round(image.width * scale);
         canvas.height = Math.round(image.height * scale);
         canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL('image/jpeg', 0.72));
+        resolve(canvas.toDataURL('image/jpeg', 0.8));
       };
       image.src = reader.result;
     };
@@ -194,7 +197,7 @@ export const openReportSheet = (mission, stage, onSaved) => {
 
   onClick(root, '[data-clear-signature]', () => signature.clear());
 
-  root.querySelector('[data-report-form]').addEventListener('submit', (event) => {
+  root.querySelector('[data-report-form]').addEventListener('submit', async (event) => {
     event.preventDefault();
     const form = event.currentTarget;
     const data = Object.fromEntries(new FormData(form));
@@ -203,6 +206,29 @@ export const openReportSheet = (mission, stage, onSaved) => {
       errorLine.innerHTML = `${icon('alert', 16)} Renseignez le kilométrage relevé au compteur avant d’enregistrer.`;
       root.querySelector('#mileage').focus();
       return;
+    }
+
+    // Les photos encore locales partent vers le stockage distant : la mission
+    // synchronisée ne contient plus que des adresses, jamais les images.
+    const submitButton = form.querySelector('button[type="submit"]');
+    if (isConfigured() && isSignedIn() && photos.some((entry) => String(entry).startsWith('data:'))) {
+      submitButton.disabled = true;
+      submitButton.textContent = 'Envoi des photos…';
+      let failures = 0;
+      for (let index = 0; index < photos.length; index += 1) {
+        if (!String(photos[index]).startsWith('data:')) continue;
+        const { data: uploaded, error } = await uploadReportPhoto(mission.reference, photos[index]);
+        if (error || !uploaded?.url) failures += 1;
+        else photos[index] = uploaded.url;
+      }
+      submitButton.disabled = false;
+      submitButton.textContent = 'Enregistrer le procès-verbal';
+      if (failures > 0) {
+        showToast(
+          `${failures} photo(s) restée(s) sur cet appareil (hors-ligne ?). Elles repartiront au prochain enregistrement.`,
+          'danger',
+        );
+      }
     }
 
     const checkedItems = [...form.querySelectorAll('input[name="checklist"]:checked')].map(

@@ -100,3 +100,6 @@ export const fetchAvailabilityDetailed = () => request('/api/availability', { au
 
 export const saveAvailability = (day, blocked) =>
   request('/api/availability', { method: 'POST', body: { day, blocked }, authenticated: true });
+
+export const uploadReportPhoto = (reference, dataUrl) =>
+  request('/api/photos', { method: 'POST', body: { reference, dataUrl }, authenticated: true });
