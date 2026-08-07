@@ -81,6 +81,12 @@ export const fetchMissions = (since) =>
 export const pushMission = (mission) =>
   request('/api/missions', { method: 'PATCH', body: { mission }, authenticated: true });
 
+export const deleteMissionOnServer = (reference) =>
+  request(`/api/missions/${encodeURIComponent(reference)}`, {
+    method: 'DELETE',
+    authenticated: true,
+  });
+
 export const transmitInvoiceToAbby = (invoice) =>
   request('/api/abby/invoice', { method: 'POST', body: { invoice }, authenticated: true });
 

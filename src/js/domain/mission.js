@@ -84,6 +84,11 @@ export const advanceMissionStatus = (missionId, statusId) => {
   });
 };
 
+export const removeMission = (missionId) => {
+  const { missions } = getState();
+  setState({ missions: missions.filter((mission) => mission.id !== missionId) });
+};
+
 export const findMissionByReference = (reference) => {
   const needle = reference.trim().toUpperCase();
   return getState().missions.find((mission) => mission.reference.toUpperCase() === needle) ?? null;

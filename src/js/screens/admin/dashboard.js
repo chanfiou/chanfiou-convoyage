@@ -10,6 +10,7 @@ import {
   advanceMissionStatus,
   missionRevenue,
   missionsThisMonth,
+  removeMission,
   statusById,
   updateMission,
 } from '../../domain/mission.js';
@@ -17,7 +18,7 @@ import { BASE_SUFFIX } from '../../domain/vat.js';
 import { invoiceForMission } from '../../domain/invoice.js';
 import { issueInvoiceForMissions } from '../../domain/invoice-issue.js';
 import { HOLD_HOURS, holdLabel, pendingHolds } from '../../domain/reminders.js';
-import { saveAvailability } from '../../data/api.js';
+import { deleteMissionOnServer, saveAvailability } from '../../data/api.js';
 import { getSettings, missingSettings } from '../../config/settings.js';
 import { bindSettingsBanner, openSettingsSheet, settingsBannerMarkup } from './settings.js';
 import { applyChaining, chainingPanelMarkup, undoChaining } from './chaining-panel.js';
@@ -152,6 +153,11 @@ const missionRow = (mission) => {
         ${!['annulee', 'livree'].includes(mission.status)
           ? html`<button type="button" class="button button--xs button--danger" data-cancel="${mission.id}">
               Annuler
+            </button>`
+          : ''}
+        ${mission.status === 'annulee' && !invoiceForMission(mission.id)
+          ? html`<button type="button" class="button button--xs button--danger" data-delete="${mission.id}">
+              ${icon('close', 20)} Supprimer définitivement
             </button>`
           : ''}
       </div>
@@ -498,6 +504,28 @@ export const renderAdmin = (params) => {
     if (next === 'etat-des-lieux' && mission && !mission.departureReport) {
       openReportSheet(mission, 'departure', reload);
     }
+    reload();
+  });
+
+  onClick(view, '[data-delete]', async (target) => {
+    const mission = getState().missions.find((entry) => entry.id === target.dataset.delete);
+    if (!mission) return;
+    const confirmed = window.confirm(
+      `Supprimer définitivement ${mission.reference} ? Les données du client, ses photos de procès-verbal et son suivi seront effacés, ici comme sur le serveur. Cette action est irréversible.`,
+    );
+    if (!confirmed) return;
+
+    target.disabled = true;
+    if (isConfigured() && isSignedIn()) {
+      const { error } = await deleteMissionOnServer(mission.reference);
+      if (error) {
+        target.disabled = false;
+        showToast(error, 'danger');
+        return;
+      }
+    }
+    removeMission(mission.id);
+    showToast(`${mission.reference} supprimée définitivement.`);
     reload();
   });
 

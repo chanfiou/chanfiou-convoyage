@@ -73,7 +73,7 @@ const corsHeaders = (request, env) => {
   return {
     'access-control-allow-origin': value || 'null',
     'access-control-allow-headers': 'content-type, authorization',
-    'access-control-allow-methods': 'GET, POST, PATCH, OPTIONS',
+    'access-control-allow-methods': 'GET, POST, PATCH, DELETE, OPTIONS',
     'access-control-max-age': '86400',
     vary: 'origin',
   };
@@ -327,6 +327,25 @@ const upsertMission = async (request, env, ctx) => {
   return json({ mission: rowToMission(row) }, existing ? 200 : 201);
 };
 
+// Suppression définitive d'une mission : la seule façon d'exercer le droit
+// d'effacement et de retirer une demande de test. Refusée dès qu'une facture
+// est attachée, la conservation étant alors obligatoire.
+const deleteMission = async (request, env, url) => {
+  const reference = decodeURIComponent(url.pathname.slice('/api/missions/'.length));
+  const row = await env.DB.prepare('SELECT * FROM missions WHERE reference = ?1').bind(reference).first();
+  if (!row) return json({ deleted: false, alreadyAbsent: true });
+
+  const payload = JSON.parse(row.payload);
+  if (payload.invoice) {
+    return fail(409, 'Cette mission porte une facture : elle doit être conservée dix ans.');
+  }
+
+  await env.DB.prepare('DELETE FROM client_push WHERE reference = ?1').bind(reference).run();
+  await env.DB.prepare('DELETE FROM missions WHERE reference = ?1').bind(reference).run();
+  await unblockDayForMission(env, reference);
+  return json({ deleted: true, reference });
+};
+
 const routes = async (request, env, url, ctx) => {
   const { pathname } = url;
   const method = request.method;
@@ -364,6 +383,12 @@ const routes = async (request, env, url, ctx) => {
     if (!operator) return fail(401, 'Connexion requise.');
     if (method === 'GET') return listMissions(request, env, url);
     if (method === 'POST' || method === 'PATCH') return upsertMission(request, env, ctx);
+  }
+
+  if (method === 'DELETE' && pathname.startsWith('/api/missions/')) {
+    const operator = await operatorFrom(request, env);
+    if (!operator) return fail(401, 'Connexion requise.');
+    return deleteMission(request, env, url);
   }
 
   if (pathname === '/api/backup') {
