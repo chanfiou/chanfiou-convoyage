@@ -16,6 +16,8 @@ import {
   unblockDayForMission,
 } from './availability.js';
 import { servePhoto, uploadPhoto } from './photos.js';
+import { notifyPendingHolds } from './reminders.js';
+import { readBackup, writeBackup } from './backup.js';
 
 const SESSION_DURATION_SECONDS = 60 * 60 * 24 * 30;
 const MAX_PAYLOAD_BYTES = 512 * 1024;
@@ -364,6 +366,13 @@ const routes = async (request, env, url, ctx) => {
     if (method === 'POST' || method === 'PATCH') return upsertMission(request, env, ctx);
   }
 
+  if (pathname === '/api/backup') {
+    const operator = await operatorFrom(request, env);
+    if (!operator) return fail(401, 'Connexion requise.');
+    if (method === 'GET') return readBackup(env);
+    if (method === 'POST') return writeBackup(request, env);
+  }
+
   if (method === 'POST' && pathname === '/api/abby/invoice') {
     const operator = await operatorFrom(request, env);
     if (!operator) return fail(401, 'Connexion requise.');
@@ -402,5 +411,12 @@ export default {
       console.error('erreur non gérée', cause);
       return json({ error: 'Erreur interne du serveur.' }, 500, headers);
     }
+  },
+
+  // Déclencheur quotidien : alerte sur les dates réservées non honorées.
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(
+      notifyPendingHolds(env).catch((cause) => console.error('relances quotidiennes', cause)),
+    );
   },
 };

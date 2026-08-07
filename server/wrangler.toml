@@ -16,5 +16,9 @@ database_id = "34acc055-166b-433a-ad84-c1fa4eb3fd28"
 binding = "PHOTOS"
 bucket_name = "chanfiou-photos"
 
+[triggers]
+# Chaque matin : alerte sur les dates réservées sans signature ni paiement.
+crons = ["0 7 * * *"]
+
 [vars]
 ALLOWED_ORIGIN = "https://chanfiou-convoyage.fr,https://convoyeur.chanfiou-convoyage.fr,https://www.chanfiou-convoyage.fr,https://chanfiou-convoyage.pages.dev"

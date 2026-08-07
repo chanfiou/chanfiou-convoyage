@@ -104,6 +104,11 @@ export const saveAvailability = (day, blocked) =>
 export const uploadReportPhoto = (reference, dataUrl) =>
   request('/api/photos', { method: 'POST', body: { reference, dataUrl }, authenticated: true });
 
+export const pushBackup = (backup) =>
+  request('/api/backup', { method: 'POST', body: backup, authenticated: true });
+
+export const fetchBackup = () => request('/api/backup', { authenticated: true });
+
 export const signContract = (reference, token, signature, signatoryName) =>
   request('/api/contract-signature', {
     method: 'POST',

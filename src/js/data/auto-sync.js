@@ -1,21 +1,49 @@
-import { subscribe } from '../core/store.js';
-import { isConfigured, isSignedIn } from './api.js';
+import { getState, subscribe } from '../core/store.js';
+import { isConfigured, isSignedIn, pushBackup } from './api.js';
 import { pendingMissions, syncNow } from './sync.js';
+import { currentBackup, markBackupDone } from '../domain/backup.js';
 
 const SYNC_INTERVAL_MS = 60000;
 const LOCAL_CHANGE_DEBOUNCE_MS = 3000;
+const BACKUP_INTERVAL_MS = 15 * 60000;
 
 let started = false;
 let running = false;
 let debounceTimer = null;
+let lastBackupSignature = null;
+let lastBackupAttempt = 0;
 
 const canSync = () => navigator.onLine && isConfigured() && isSignedIn();
+
+// Sauvegarde automatique de ce que la synchronisation ne couvre pas
+// (factures, avoirs, réglages), au plus une fois par quart d'heure et
+// seulement si quelque chose a changé.
+const backupIfNeeded = async () => {
+  if (!canSync()) return;
+  if (Date.now() - lastBackupAttempt < BACKUP_INTERVAL_MS) return;
+  const state = getState();
+  const signature = JSON.stringify({
+    invoices: (state.invoices ?? []).length,
+    creditNotes: (state.creditNotes ?? []).length,
+    missions: (state.missions ?? []).length,
+    settings: state.settings ?? null,
+    lastInvoice: (state.invoices ?? [])[0]?.number ?? null,
+  });
+  if (signature === lastBackupSignature) return;
+  lastBackupAttempt = Date.now();
+  const { backup, exportedAt } = currentBackup();
+  const { data, error } = await pushBackup(backup);
+  if (error || !data?.savedAt) return;
+  lastBackupSignature = signature;
+  markBackupDone(exportedAt);
+};
 
 const run = async () => {
   if (running || !canSync()) return;
   running = true;
   try {
     await syncNow();
+    await backupIfNeeded();
   } finally {
     running = false;
   }

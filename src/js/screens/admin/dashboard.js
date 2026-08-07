@@ -16,6 +16,8 @@ import {
 import { BASE_SUFFIX } from '../../domain/vat.js';
 import { invoiceForMission } from '../../domain/invoice.js';
 import { issueInvoiceForMissions } from '../../domain/invoice-issue.js';
+import { HOLD_HOURS, holdLabel, pendingHolds } from '../../domain/reminders.js';
+import { saveAvailability } from '../../data/api.js';
 import { getSettings, missingSettings } from '../../config/settings.js';
 import { bindSettingsBanner, openSettingsSheet, settingsBannerMarkup } from './settings.js';
 import { applyChaining, chainingPanelMarkup, undoChaining } from './chaining-panel.js';
@@ -157,6 +159,59 @@ const missionRow = (mission) => {
   `;
 };
 
+const holdsPanelMarkup = (holds) => {
+  if (holds.length === 0) return '';
+  return html`
+    <section class="card card--accent">
+      <div class="row row--between">
+        <h2 class="card-title">${icon('alert', 20)} Dates réservées à relancer</h2>
+        <span class="chip chip--status chip--warning">${holds.length}</span>
+      </div>
+      <p class="text-small text-muted">
+        Vos conditions générales tiennent la date ${HOLD_HOURS} heures. Au-delà, relancez le client
+        ou libérez la journée pour la remettre à la vente.
+      </p>
+      <ul class="stack-lg">
+        ${holds
+          .map(
+            ({ mission, kind, hours }) => html`
+              <li class="card card--flat">
+                <div class="card__row">
+                  <div class="stack-sm">
+                    <h3 class="card-title">${escapeHtml(mission.reference)} — ${escapeHtml(holdLabel(kind))}</h3>
+                    <span class="text-small text-muted">
+                      ${escapeHtml(mission.company?.trim() || mission.contactName || 'Client')} —
+                      prise en charge du ${mission.pickupDate ? formatDate(mission.pickupDate) : 'à préciser'}
+                    </span>
+                    <span class="text-small text-muted">Depuis ${hours} heures</span>
+                  </div>
+                </div>
+                <div class="row row--wrap">
+                  <a class="button button--xs button--primary" href="tel:${escapeHtml(mission.contactPhone ?? '')}">
+                    ${icon('phone', 20)} Relancer
+                  </a>
+                  ${mission.pickupDate
+                    ? html`<button
+                        type="button"
+                        class="button button--xs button--stroke"
+                        data-release-day="${escapeHtml(mission.pickupDate.slice(0, 10))}"
+                      >
+                        ${icon('calendar', 20)} Libérer la date
+                      </button>`
+                    : ''}
+                  <button type="button" class="button button--xs button--danger" data-cancel="${mission.id}">
+                    Annuler la mission
+                  </button>
+                </div>
+              </li>
+            `,
+          )
+          .join('')}
+      </ul>
+    </section>
+  `;
+};
+
 export const renderAdmin = (params) => {
   const state = getState();
 
@@ -203,6 +258,8 @@ export const renderAdmin = (params) => {
       ${settingsBannerMarkup(getSettings())}
 
       ${backupReminderMarkup(state)}
+
+      ${holdsPanelMarkup(pendingHolds(state.missions))}
 
       ${chainingPanelMarkup(state.missions)}
 
@@ -441,6 +498,19 @@ export const renderAdmin = (params) => {
     if (next === 'etat-des-lieux' && mission && !mission.departureReport) {
       openReportSheet(mission, 'departure', reload);
     }
+    reload();
+  });
+
+  onClick(view, '[data-release-day]', async (target) => {
+    const day = target.dataset.releaseDay;
+    target.disabled = true;
+    const { error } = await saveAvailability(day, false);
+    target.disabled = false;
+    if (error) {
+      showToast(error, 'danger');
+      return;
+    }
+    showToast(`Journée du ${formatDate(day)} libérée : elle est de nouveau réservable.`);
     reload();
   });
 

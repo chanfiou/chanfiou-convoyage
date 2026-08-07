@@ -12,6 +12,7 @@ import {
   markBackupDone,
   parseBackup,
 } from '../../domain/backup.js';
+import { fetchBackup, isSignedIn } from '../../data/api.js';
 
 const downloadJson = (fileName, content) => {
   const blob = new Blob([content], { type: 'application/json;charset=utf-8' });
@@ -38,9 +39,9 @@ export const backupPanelMarkup = (state) => {
       </div>
 
       <p class="text-small text-muted">
-        Vos missions, factures et avoirs sont stockés uniquement sur cet appareil. Un téléphone perdu
-        ou un historique de navigation effacé, et tout disparaît. Vos factures doivent être
-        conservées dix ans : sauvegardez chaque semaine et gardez le fichier ailleurs.
+        Tant que vous êtes connecté, vos factures, avoirs et réglages sont sauvegardés
+        automatiquement sur votre serveur toutes les quinze minutes. Vos factures devant être
+        conservées dix ans, gardez en plus une copie hors ligne de temps en temps.
       </p>
 
       <p class="text-small ${stale ? 'text-accent' : 'text-muted'}">
@@ -56,9 +57,12 @@ export const backupPanelMarkup = (state) => {
           ${icon('download', 24)} Sauvegarder maintenant
         </button>
         <label class="button button--s button--stroke">
-          ${icon('inbox', 24)} Restaurer une sauvegarde
+          ${icon('inbox', 24)} Restaurer un fichier
           <input class="visually-hidden" type="file" accept="application/json,.json" data-backup-import />
         </label>
+        <button type="button" class="button button--s button--stroke" data-backup-restore-server>
+          ${icon('route', 24)} Restaurer depuis le serveur
+        </button>
       </div>
 
       <p class="text-small text-muted">
@@ -81,6 +85,29 @@ export const bindBackupPanel = (root, onRestored) => {
     markBackupDone(exportedAt);
     showToast(
       `Sauvegarde de ${backup.counts.missions} mission(s) et ${backup.counts.invoices} facture(s) téléchargée.`,
+    );
+    onRestored?.();
+  });
+
+  onClick(root, '[data-backup-restore-server]', async (target) => {
+    if (!isSignedIn()) {
+      showToast('Connectez-vous pour récupérer la sauvegarde du serveur.', 'danger');
+      return;
+    }
+    target.disabled = true;
+    const { data, error } = await fetchBackup();
+    target.disabled = false;
+    if (error) {
+      showToast(error, 'danger');
+      return;
+    }
+    if (!data || data.backup === null || !data.data) {
+      showToast('Aucune sauvegarde automatique disponible sur le serveur pour le moment.', 'danger');
+      return;
+    }
+    const summary = applyBackup(data);
+    showToast(
+      `Sauvegarde du ${formatDateTime(data.savedAt ?? data.exportedAt)} restaurée : ${summary.missions} mission(s), ${summary.invoices} facture(s), ${summary.creditNotes} avoir(s).`,
     );
     onRestored?.();
   });
