@@ -1,7 +1,7 @@
 import { html, onClick } from '../core/dom.js';
 import { fromHtml } from '../core/ui.js';
 import { navigate } from '../core/router.js';
-import { COMPANY, PAYMENT } from '../config/company.js';
+import { COMPANY, MEDIATION, PAYMENT } from '../config/company.js';
 
 export const TERMS_VERSION = '2.0 — août 2026';
 
@@ -179,14 +179,18 @@ export const renderConditions = () => {
       )}
 
       ${article(
-        'Article 12 — Réclamations et médiation',
+        'Article 12 — Réclamations et médiation de la consommation',
         `Toute réclamation est adressée à ${COMPANY.email} ou ${COMPANY.phone}. Le convoyeur
         s’engage à répondre dans un délai de quinze jours.`,
-        `Client consommateur : conformément à l’article L612-1 du code de la consommation, après
-        démarche écrite préalable restée infructueuse, le consommateur peut recourir gratuitement au
-        médiateur de la consommation dont les coordonnées sont communiquées sur demande et
-        rappelées sur les factures. La plateforme européenne de règlement en ligne des litiges est
-        également accessible en ligne.`,
+        `Client consommateur : conformément aux articles L612-1 et L616-1 du code de la
+        consommation, le convoyeur a désigné une entité de médiation de la consommation. Après une
+        réclamation écrite préalable restée sans réponse satisfaisante dans un délai de deux mois,
+        le consommateur peut recourir gratuitement à :
+        ${MEDIATION.name}, ${MEDIATION.addressLine}, ${MEDIATION.postalCode} ${MEDIATION.city} —
+        ${MEDIATION.website}. La saisine s’effectue par courrier ou directement en ligne sur ce
+        site.`,
+        `La plateforme européenne de règlement en ligne des litiges est également accessible à
+        l’adresse ec.europa.eu/consumers/odr.`,
       )}
 
       ${article(

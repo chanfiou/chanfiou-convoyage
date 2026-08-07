@@ -1,6 +1,7 @@
 import { escapeHtml, html } from '../../core/dom.js';
 import { formatDate, formatEuro } from '../../core/format.js';
 import { showsVatLines, vatRatePercent } from '../../domain/vat.js';
+import { MEDIATION } from '../../config/company.js';
 
 const lineRow = (line) => html`
   <tr>
@@ -123,6 +124,11 @@ export const invoiceDocumentMarkup = (invoice) => {
       ${invoice.latePenaltyMention ? html`<p>${escapeHtml(invoice.latePenaltyMention)}</p>` : ''}
       ${invoice.recoveryIndemnityMention ? html`<p>${escapeHtml(invoice.recoveryIndemnityMention)}</p>` : ''}
       ${invoice.noDiscountMention ? html`<p>${escapeHtml(invoice.noDiscountMention)}</p>` : ''}
+      <p>
+        Médiation de la consommation : ${escapeHtml(MEDIATION.name)},
+        ${escapeHtml(MEDIATION.addressLine)}, ${escapeHtml(MEDIATION.postalCode)}
+        ${escapeHtml(MEDIATION.city)} — ${escapeHtml(MEDIATION.website)}.
+      </p>
     </section>
   </article>
 `;

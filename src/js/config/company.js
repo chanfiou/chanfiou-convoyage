@@ -56,6 +56,16 @@ export const COMMITMENTS = [
   },
 ];
 
+// Entité de médiation de la consommation désignée (obligation des articles
+// L612-1 et L616-1 du code de la consommation).
+export const MEDIATION = {
+  name: 'ANM Consommation',
+  addressLine: '25 allée Rose Dieng Kuntz',
+  postalCode: '75019',
+  city: 'Paris',
+  website: 'www.anm-conso.com',
+};
+
 export const PRO_ARGUMENTS = [
   'Remise automatique dès 3 convoyages par mois, sans compte à créer.',
   'Transferts inter-sites, restitutions de leasing, navettes atelier et contrôle technique.',

@@ -1,7 +1,7 @@
-import { html, onClick } from '../core/dom.js';
+import { escapeHtml, html, onClick } from '../core/dom.js';
 import { fromHtml } from '../core/ui.js';
 import { navigate } from '../core/router.js';
-import { COMPANY } from '../config/company.js';
+import { COMPANY, MEDIATION } from '../config/company.js';
 
 export const renderLegal = () => {
   const view = fromHtml(html`
@@ -56,6 +56,24 @@ export const renderLegal = () => {
           Vous disposez d’un droit d’accès, de rectification, d’effacement, de limitation et
           d’opposition sur vos données. Pour l’exercer, écrivez à ${COMPANY.email}. Vous pouvez
           également adresser une réclamation à la CNIL (cnil.fr).
+        </p>
+      </section>
+
+      <section class="card">
+        <h2 class="card-title">Médiation de la consommation</h2>
+        <p class="text-small text-muted">
+          Conformément aux articles L612-1 et L616-1 du code de la consommation, Chanfiou
+          Entreprise a désigné l’entité de médiation suivante :<br />
+          <strong>${escapeHtml(MEDIATION.name)}</strong><br />
+          ${escapeHtml(MEDIATION.addressLine)}, ${escapeHtml(MEDIATION.postalCode)}
+          ${escapeHtml(MEDIATION.city)}<br />
+          <a href="https://${escapeHtml(MEDIATION.website)}" target="_blank" rel="noopener noreferrer">
+            ${escapeHtml(MEDIATION.website)}
+          </a>
+        </p>
+        <p class="text-small text-muted">
+          Après une réclamation écrite adressée à ${COMPANY.email} restée sans réponse
+          satisfaisante, tout client consommateur peut saisir gratuitement ce médiateur.
         </p>
       </section>
 
