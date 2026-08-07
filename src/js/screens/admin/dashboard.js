@@ -563,8 +563,16 @@ export const renderAdmin = (params) => {
     });
   });
   onClick(view, '[data-cancel]', (target) => {
-    advanceMissionStatus(target.dataset.cancel, 'annulee');
-    marquerASynchroniser(target.dataset.cancel);
+    const mission = getState().missions.find((entry) => entry.id === target.dataset.cancel);
+    if (!mission) return;
+    const confirmed = window.confirm(
+      `Annuler le convoyage ${mission.reference} ?\n\n` +
+        `${mission.departure} vers ${mission.arrival}.\n\n` +
+        `Le client en sera averti et la date réservée sera libérée. L’annulation ne peut pas être reprise.`,
+    );
+    if (!confirmed) return;
+    advanceMissionStatus(mission.id, 'annulee');
+    marquerASynchroniser(mission.id);
     showToast('Mission annulée.', 'danger');
     reload();
   });
@@ -586,8 +594,19 @@ export const renderAdmin = (params) => {
     reload();
   });
   onClick(view, '[data-reset-all]', () => {
+    const current = getState();
+    const missions = (current.missions ?? []).length;
+    const invoices = (current.invoices ?? []).length;
+    const creditNotes = (current.creditNotes ?? []).length;
+    const confirmed = window.confirm(
+      `Effacer toutes les données de cet appareil ?\n\n` +
+        `${missions} mission(s), ${invoices} facture(s) et ${creditNotes} avoir(s) seront supprimés, ainsi que vos réglages d’entreprise.\n\n` +
+        `Les missions déjà envoyées au serveur reviendront à la prochaine synchronisation. Vos factures et avoirs, eux, ne se récupèrent que par une sauvegarde.\n\n` +
+        `Cette action est irréversible.`,
+    );
+    if (!confirmed) return;
     resetState();
-    showToast('Toutes les données ont été effacées.', 'danger');
+    showToast('Toutes les données de cet appareil ont été effacées.', 'danger');
     navigate('espace');
   });
 

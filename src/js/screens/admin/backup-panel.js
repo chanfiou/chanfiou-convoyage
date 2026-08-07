@@ -73,6 +73,21 @@ export const backupPanelMarkup = (state) => {
   `;
 };
 
+// Une restauration écrase tout ce que contient l'appareil : on montre ce qui
+// arrive et ce qui part avant de valider.
+const confirmRestore = (backup) => {
+  const current = getState();
+  const source = backup.savedAt ?? backup.exportedAt;
+  return window.confirm(
+    `Restaurer cette sauvegarde ?\n\n` +
+      `Sauvegarde du ${formatDateTime(source)} : ${(backup.data.missions ?? []).length} mission(s), ` +
+      `${(backup.data.invoices ?? []).length} facture(s), ${(backup.data.creditNotes ?? []).length} avoir(s).\n\n` +
+      `Elle remplacera les données de cet appareil : ${(current.missions ?? []).length} mission(s), ` +
+      `${(current.invoices ?? []).length} facture(s), ${(current.creditNotes ?? []).length} avoir(s).\n\n` +
+      `Cette action est irréversible.`,
+  );
+};
+
 export const bindBackupPanel = (root, onRestored) => {
   onClick(root, '[data-backup-export]', () => {
     const state = getState();
@@ -105,6 +120,7 @@ export const bindBackupPanel = (root, onRestored) => {
       showToast('Aucune sauvegarde automatique disponible sur le serveur pour le moment.', 'danger');
       return;
     }
+    if (!confirmRestore(data)) return;
     const summary = applyBackup(data);
     showToast(
       `Sauvegarde du ${formatDateTime(data.savedAt ?? data.exportedAt)} restaurée : ${summary.missions} mission(s), ${summary.invoices} facture(s), ${summary.creditNotes} avoir(s).`,
@@ -133,6 +149,7 @@ export const bindBackupPanel = (root, onRestored) => {
       showToast(error, 'danger');
       return;
     }
+    if (!confirmRestore(backup)) return;
 
     const summary = applyBackup(backup);
     showToast(
