@@ -114,13 +114,33 @@ export const transmitInvoiceToAbby = async (request, env) => {
       body: linesPayload,
     });
 
+    if (!updated.finalizable) {
+      return json(
+        {
+          abbyBillingId: draft.id,
+          state: updated.state,
+          finalized: false,
+          finalizeRequirements: (updated.finalizeRequirements ?? []).map((item) => item.message),
+        },
+        409,
+      );
+    }
+
+    // La finalisation chez Abby attribue la numérotation officielle :
+    // c'est elle que porte la facture remise au client.
+    const finalized = await abbyRequest(env, `/v2/billing/${draft.id}/finalize`, {
+      method: 'PATCH',
+      body: {},
+    });
+
     return json({
       abbyBillingId: draft.id,
       organizationId: organization.id,
-      state: updated.state,
-      finalizable: updated.finalizable,
-      totalExcludingVatCents: updated.total?.amountWithoutTaxAfterDiscount ?? null,
-      finalizeRequirements: (updated.finalizeRequirements ?? []).map((item) => item.message),
+      state: finalized.state,
+      finalized: true,
+      number: finalized.number ?? null,
+      isTestInvoice: Boolean(finalized.test),
+      totalExcludingVatCents: finalized.total?.amountWithoutTaxAfterDiscount ?? null,
     });
   } catch (cause) {
     if (cause instanceof AbbyError) return fail(502, `Abby a refusé la demande : ${cause.message}`);

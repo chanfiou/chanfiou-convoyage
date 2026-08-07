@@ -102,6 +102,13 @@ const timelineMarkup = (mission) => {
 
 const groupedIban = (iban) => iban.replace(/(.{4})/g, '$1 ').trim();
 
+// Lien de suivi : la référence et le jeton privé du client, pour retrouver
+// son convoyage depuis n'importe quel appareil.
+export const trackingLink = (mission) => {
+  const base = `${window.location.origin}${window.location.pathname}`;
+  return `${base}#/suivi?reference=${encodeURIComponent(mission.reference)}&token=${encodeURIComponent(mission.trackingToken ?? '')}`;
+};
+
 const paymentCardMarkup = (mission) => html`
   <div class="card card--flat stack-sm">
     <h3 class="card-title">${icon('receipt', 20)} Règlement par virement</h3>
@@ -170,14 +177,63 @@ const missionCard = (mission) => {
             <p class="text-small text-muted" data-notify-state="${mission.id}" hidden></p>
           `
         : ''}
+      ${mission.trackingToken
+        ? html`
+            <hr class="divider" />
+            <p class="text-small text-muted">
+              Conservez votre lien de suivi : il vous redonne accès à ce convoyage, à vos documents
+              et à la signature, depuis n’importe quel téléphone ou ordinateur.
+            </p>
+            <div class="row row--wrap">
+              <button type="button" class="button button--xs button--stroke" data-copy-link="${mission.id}">
+                Copier mon lien de suivi
+              </button>
+              <a
+                class="button button--xs button--stroke"
+                href="mailto:?subject=${encodeURIComponent(`Suivi de mon convoyage ${mission.reference}`)}&body=${encodeURIComponent(trackingLink(mission))}"
+              >
+                ${icon('mail', 16)} Me l’envoyer par mail
+              </a>
+            </div>
+          `
+        : ''}
     </article>
   `;
+};
+
+// Ouverture d'un lien de suivi sur un nouvel appareil : le convoyage est
+// récupéré auprès du serveur grâce au jeton contenu dans le lien.
+const adoptSharedMission = async (reference, token) => {
+  const { data, error } = await fetchTrackedMission(reference, token);
+  if (error || !data?.mission) return false;
+  const missions = getState().missions ?? [];
+  if (missions.some((entry) => entry.reference === reference)) return false;
+  setState({
+    missions: [
+      {
+        ...data.mission,
+        id: `partage-${reference}`,
+        reference,
+        trackingToken: token,
+        origin: 'client',
+        history: data.mission.history ?? [],
+      },
+      ...missions,
+    ],
+  });
+  return true;
 };
 
 export const renderTracking = (params) => {
   const requested = params.reference ?? '';
   const { missions } = getState();
   const mission = requested ? findMissionByReference(requested) : null;
+
+  if (requested && !mission && params.token && isConfigured()) {
+    adoptSharedMission(requested, params.token).then((adopted) => {
+      if (adopted) refresh();
+    });
+  }
 
   const resultMarkup = () => {
     if (requested && !mission) {
@@ -307,6 +363,17 @@ export const renderTracking = (params) => {
       refresh();
     });
   }
+
+  onClick(view, '[data-copy-link]', async (target) => {
+    const shared = (getState().missions ?? []).find((entry) => entry.id === target.dataset.copyLink);
+    if (!shared) return;
+    try {
+      await navigator.clipboard.writeText(trackingLink(shared));
+      showToast('Lien de suivi copié. Conservez-le pour retrouver votre convoyage.');
+    } catch {
+      showToast('Copie impossible : notez votre référence et votre lien.', 'danger');
+    }
+  });
 
   onClick(view, '[data-copy-iban]', async () => {
     try {

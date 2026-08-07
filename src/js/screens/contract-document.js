@@ -75,12 +75,13 @@ export const contractMarkup = (mission) => {
         <h3>Conditions essentielles</h3>
         <p>
           Prix ferme incluant péages, carburant et assurance (véhicule confié garanti
-          ${COMPANY.insurance.coverage.toLocaleString('fr-FR')} €). Prestation payable avant le
-          départ par virement au bénéfice de ${escapeHtml(PAYMENT.holder)}. Procès-verbaux
-          contradictoires de prise en charge et de livraison, avec photographies horodatées et
-          signatures ; réserves à formuler au plus tard 48 heures après la livraison. Les
-          conditions générales de convoyage publiées sur chanfiou-convoyage.fr/#/conditions font
-          partie intégrante du présent contrat.
+          ${COMPANY.insurance.coverage.toLocaleString('fr-FR')} € par sinistre). TVA non
+          applicable, article 293 B du CGI. Prestation payable avant le départ par virement au
+          bénéfice de ${escapeHtml(PAYMENT.holder)}. Procès-verbaux contradictoires de prise en
+          charge et de livraison, avec photographies horodatées et signatures ; réserves à
+          formuler au plus tard 48 heures après la livraison. Convoyage exécuté personnellement,
+          sans sous-traitance. Les conditions générales publiées sur
+          chanfiou-convoyage.fr/#/conditions font partie intégrante du présent contrat.
         </p>
       </section>
 

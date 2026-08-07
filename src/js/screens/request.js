@@ -10,6 +10,7 @@ import { isConfigured, submitRequest } from '../data/api.js';
 import { updateMission } from '../domain/mission.js';
 import { quoteInputFrom } from '../domain/chaining.js';
 import { TERMS_VERSION } from './conditions.js';
+import { trackingLink } from './tracking.js';
 
 const REQUIRED_FIELDS = ['contactName', 'contactPhone', 'pickupDate'];
 
@@ -124,6 +125,10 @@ export const renderRequest = () => {
           <span class="option__body">
             <span class="option__label">J’accepte les conditions générales de convoyage</span>
             <span class="text-small text-muted">
+              Et si le convoyage a lieu dans les quatorze jours, je demande expressément son
+              exécution à la date choisie (article 5 — droit de rétractation).
+            </span>
+            <span class="text-small text-muted">
               <button type="button" class="button button--xs button--link" data-goto="conditions">
                 Lire les conditions générales
               </button>
@@ -232,6 +237,7 @@ export const renderRequest = () => {
         if (currentQuote) {
           setState({ lastQuote: { ...currentQuote, sentReference: data.reference } });
         }
+        const suivi = trackingLink({ reference: data.reference, trackingToken: data.token });
         slot.innerHTML = html`
           <section class="card card--accent" aria-live="polite">
             <h2 class="card-title">Demande envoyée</h2>
@@ -240,11 +246,34 @@ export const renderRequest = () => {
               ${escapeHtml(data.reference)}. Vous serez rappelé sous
               ${COMPANY.responseDelayHours} heures ouvrées.
             </p>
-            <button type="button" class="button button--m button--primary" data-goto-suivi>
-              ${icon('route', 24)} Suivre ma demande
-            </button>
+            <p class="text-small text-muted">
+              Conservez votre lien de suivi : c’est lui qui vous donnera accès à votre contrat, à
+              votre facture et aux procès-verbaux, depuis n’importe quel appareil.
+            </p>
+            <div class="row row--wrap">
+              <button type="button" class="button button--s button--primary" data-goto-suivi>
+                ${icon('route', 24)} Suivre ma demande
+              </button>
+              <button type="button" class="button button--s button--stroke" data-copy-tracking>
+                Copier mon lien de suivi
+              </button>
+              <a
+                class="button button--s button--stroke"
+                href="mailto:?subject=${encodeURIComponent(`Suivi de mon convoyage ${data.reference}`)}&body=${encodeURIComponent(suivi)}"
+              >
+                ${icon('mail', 24)} Me l’envoyer par mail
+              </a>
+            </div>
           </section>
         `;
+        onClick(slot, '[data-copy-tracking]', async () => {
+          try {
+            await navigator.clipboard.writeText(suivi);
+            showToast('Lien de suivi copié.');
+          } catch {
+            showToast(`Notez votre référence : ${data.reference}.`, 'danger');
+          }
+        });
         slot.querySelector('[data-goto-suivi]').addEventListener('click', () => {
           navigate('suivi', { reference: data.reference });
         });

@@ -8,7 +8,7 @@ export const COMPANY = {
   city: 'À compléter',
   insurance: {
     provider: 'RC Professionnelle + garantie véhicule confié',
-    coverage: 150000,
+    coverage: 300000,
   },
   responseDelayHours: 2,
   supportHours: 'Du lundi au samedi, 7h – 20h',
@@ -41,7 +41,7 @@ export const COMMITMENTS = [
   },
   {
     icon: 'shield',
-    title: 'Véhicule assuré 150 000 €',
+    title: 'Véhicule assuré 300 000 €',
     text: 'RC professionnelle et garantie du véhicule confié pendant tout le trajet.',
   },
   {

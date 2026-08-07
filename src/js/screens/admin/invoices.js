@@ -7,13 +7,12 @@ import { navigate, refresh } from '../../core/router.js';
 import {
   INVOICE_STATUSES,
   advanceInvoiceStatus,
-  createInvoiceForMissions,
   groupInvoiceableMissions,
   invoiceStatusById,
   isInvoiceOverdue,
-  updateInvoice,
 } from '../../domain/invoice.js';
-import { isSignedIn, transmitInvoiceToAbby } from '../../data/api.js';
+import { issueInvoiceForMissions, transmitExistingInvoice } from '../../domain/invoice-issue.js';
+import { isSignedIn } from '../../data/api.js';
 import { buildFacturXXml, facturXFileName } from '../../domain/facturx.js';
 import { invoiceDocumentMarkup, printInvoice } from './invoice-document.js';
 import { bindSettingsBanner, settingsBannerMarkup, settingsSummaryMarkup } from './settings.js';
@@ -355,9 +354,27 @@ export const renderInvoices = () => {
     }
     const ids = target.dataset.groupInvoice.split('|');
     const missions = (getState().missions ?? []).filter((mission) => ids.includes(mission.id));
-    const invoice = createInvoiceForMissions(missions);
-    showToast(`Facture ${invoice.number} créée pour ${missions.length} mission(s).`);
-    refresh();
+    const nonSignes = missions.filter((mission) => !mission.contractSignedAt);
+    if (nonSignes.length > 0) {
+      showToast(
+        `Contrat non signé pour ${nonSignes.map((mission) => mission.reference).join(', ')} : facturation impossible.`,
+        'danger',
+      );
+      return;
+    }
+    issueInvoiceForMissions(missions).then(({ invoice, official, error }) => {
+      if (!invoice) {
+        showToast(error ?? 'Facture impossible.', 'danger');
+        return;
+      }
+      showToast(
+        official
+          ? `Facture ${invoice.number} émise pour ${missions.length} mission(s).`
+          : `${error} La facture reste à transmettre.`,
+        official ? 'success' : 'danger',
+      );
+      refresh();
+    });
   });
   onClick(view, '[data-abby]', async (target) => {
     const invoice = findInvoice(target.dataset.abby);
@@ -367,16 +384,14 @@ export const renderInvoices = () => {
       return;
     }
     target.disabled = true;
-    showToast(`Transmission de ${invoice.number} à Abby…`);
-    const { data, error } = await transmitInvoiceToAbby(invoice);
+    showToast('Transmission à votre plateforme agréée…');
+    const { invoice: official, error } = await transmitExistingInvoice(invoice);
     if (error) {
       target.disabled = false;
       showToast(error, 'danger');
       return;
     }
-    updateInvoice(invoice.id, { abbyBillingId: data.abbyBillingId });
-    advanceInvoiceStatus(invoice.id, 'transmise');
-    showToast(`Facture ${invoice.number} créée en brouillon dans Abby. Finalisez-la depuis votre compte Abby.`);
+    showToast(`Facture finalisée sous le numéro ${official.number} et transmise au client.`);
     refresh();
   });
 

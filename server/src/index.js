@@ -40,6 +40,16 @@ const CLIENT_VISIBLE_FIELDS = [
   'contractSignatoryName',
   'contractSignature',
   'invoice',
+  // Données fournies par le client lui-même : il doit les retrouver sur
+  // n'importe quel appareil, via son lien de suivi.
+  'quote',
+  'contactName',
+  'contactPhone',
+  'contactEmail',
+  'company',
+  'buyerSiren',
+  'pickupAddress',
+  'dropAddress',
 ];
 
 // Champs que seul le client alimente : ils ne doivent jamais être écrasés

@@ -14,7 +14,8 @@ import {
   updateMission,
 } from '../../domain/mission.js';
 import { BASE_SUFFIX } from '../../domain/vat.js';
-import { createInvoiceForMission, invoiceForMission } from '../../domain/invoice.js';
+import { invoiceForMission } from '../../domain/invoice.js';
+import { issueInvoiceForMissions } from '../../domain/invoice-issue.js';
 import { getSettings, missingSettings } from '../../config/settings.js';
 import { bindSettingsBanner, openSettingsSheet, settingsBannerMarkup } from './settings.js';
 import { applyChaining, chainingPanelMarkup, undoChaining } from './chaining-panel.js';
@@ -314,28 +315,42 @@ export const renderAdmin = (params) => {
 
   bindSettingsBanner(view, reload);
   onClick(view, '[data-goto]', (target) => navigate(target.dataset.goto));
-  onClick(view, '[data-invoice]', (target) => {
+  onClick(view, '[data-invoice]', async (target) => {
     const mission = getState().missions.find((entry) => entry.id === target.dataset.invoice);
     if (!mission) return;
+    if (invoiceForMission(mission.id)) {
+      navigate('factures');
+      return;
+    }
     if (missingSettings(getSettings()).length > 0) {
       showToast('Complétez les réglages de l’entreprise avant de facturer.', 'danger');
       openSettingsSheet(reload);
       return;
     }
     // Pas de facture sans contrat signé par le client.
-    if (!invoiceForMission(mission.id) && !mission.contractSignedAt) {
+    if (!mission.contractSignedAt) {
       showToast(
         'Le client n’a pas encore signé le contrat. La facture ne peut pas être émise.',
         'danger',
       );
       return;
     }
-    const invoice = createInvoiceForMission(mission);
-    // La facture voyage avec la mission : le client la retrouve dans son suivi.
-    updateMission(mission.id, { invoice });
+    target.disabled = true;
+    showToast('Émission de la facture chez votre plateforme agréée…');
+    const { invoice, official, error } = await issueInvoiceForMissions([mission]);
+    target.disabled = false;
+    if (!invoice) {
+      showToast(error ?? 'Facture impossible.', 'danger');
+      return;
+    }
     if (['demande', 'confirmee'].includes(mission.status)) advanceMissionStatus(mission.id, 'facturee');
     marquerASynchroniser(mission.id);
-    showToast(`Facture ${invoice.number} créée et transmise au client.`);
+    showToast(
+      official
+        ? `Facture ${invoice.number} émise et transmise au client.`
+        : `${error} La facture reste à transmettre depuis l’écran Factures.`,
+      official ? 'success' : 'danger',
+    );
     navigate('factures');
   });
   onClick(view, '[data-chain]', (target) => {
