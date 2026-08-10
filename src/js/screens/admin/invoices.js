@@ -78,28 +78,28 @@ const invoiceCard = (invoice, creditNotes) => {
               ${icon('calendar', 16)} Échéance le ${formatDate(invoice.dueAt)}
             </p>`}
       <div class="row row--wrap">
-        <button type="button" class="button button--xs button--stroke" data-preview="${invoice.id}">
+        <button type="button" class="button button--xs button--stroke" data-preview="${escapeHtml(invoice.id)}">
           Aperçu
         </button>
-        <button type="button" class="button button--xs button--stroke" data-print="${invoice.id}">
+        <button type="button" class="button button--xs button--stroke" data-print="${escapeHtml(invoice.id)}">
           ${icon('download', 20)} PDF
         </button>
-        <button type="button" class="button button--xs button--primary" data-xml="${invoice.id}">
+        <button type="button" class="button button--xs button--primary" data-xml="${escapeHtml(invoice.id)}">
           ${icon('download', 20)} Factur-X
         </button>
         ${invoice.status === 'emise' && !fullyCredited
-          ? html`<button type="button" class="button button--xs button--secondary" data-abby="${invoice.id}">
+          ? html`<button type="button" class="button button--xs button--secondary" data-abby="${escapeHtml(invoice.id)}">
               ${icon('send', 20)} Transmettre à Abby
             </button>`
           : ''}
         ${status.next && !fullyCredited
-          ? html`<button type="button" class="button button--xs button--secondary" data-advance-invoice="${invoice.id}" data-next="${status.next}">
+          ? html`<button type="button" class="button button--xs button--secondary" data-advance-invoice="${escapeHtml(invoice.id)}" data-next="${status.next}">
               ${escapeHtml(invoiceStatusById(status.next).label)}
             </button>`
           : ''}
         ${fullyCredited
           ? ''
-          : html`<button type="button" class="button button--xs button--danger" data-credit="${invoice.id}">
+          : html`<button type="button" class="button button--xs button--danger" data-credit="${escapeHtml(invoice.id)}">
               Émettre un avoir
             </button>`}
       </div>
@@ -125,13 +125,13 @@ const creditNoteCard = (note) => html`
       </div>
     </div>
     <div class="row row--wrap">
-      <button type="button" class="button button--xs button--stroke" data-preview-credit="${note.id}">
+      <button type="button" class="button button--xs button--stroke" data-preview-credit="${escapeHtml(note.id)}">
         Aperçu
       </button>
-      <button type="button" class="button button--xs button--stroke" data-print-credit="${note.id}">
+      <button type="button" class="button button--xs button--stroke" data-print-credit="${escapeHtml(note.id)}">
         ${icon('download', 20)} PDF
       </button>
-      <button type="button" class="button button--xs button--primary" data-xml-credit="${note.id}">
+      <button type="button" class="button button--xs button--primary" data-xml-credit="${escapeHtml(note.id)}">
         ${icon('download', 20)} Factur-X
       </button>
     </div>

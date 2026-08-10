@@ -6,7 +6,7 @@ import { MEDIATION } from '../../config/company.js';
 const lineRow = (line) => html`
   <tr>
     <td>${escapeHtml(line.description)}</td>
-    <td class="numeric">${line.quantity}</td>
+    <td class="numeric">${escapeHtml(line.quantity)}</td>
     <td class="numeric">${formatEuro(line.unitPrice)}</td>
     <td class="numeric">${formatEuro(line.quantity * line.unitPrice)}</td>
   </tr>

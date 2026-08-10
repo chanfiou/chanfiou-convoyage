@@ -98,6 +98,16 @@ Doit répondre `{"status":"ok","service":"chanfiou-convoyage"}`.
 100 000 écritures et 5 millions de lectures par jour, 5 Go de stockage,
 aucune mise en pause après inactivité. À votre volume, vous ne paierez rien.
 
+## Après une mise à jour du schéma
+
+Le fichier `schema.sql` peut être rejoué sans risque (les tables existantes
+sont conservées). Après une évolution qui ajoute une table — comme `throttle`,
+la limitation de tentatives — exécutez :
+
+```
+npx wrangler d1 execute chanfiou-convoyage --remote --file=./schema.sql
+```
+
 ## Si vous changez de mot de passe
 
 Régénérez l'empreinte, puis `npx wrangler secret put OPERATOR_PASSWORD_HASH`.

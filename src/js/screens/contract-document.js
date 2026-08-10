@@ -104,7 +104,7 @@ export const contractMarkup = (mission) => {
               </p>
               ${mission.contractSignature
                 ? html`<img
-                    src="${mission.contractSignature}"
+                    src="${escapeHtml(mission.contractSignature)}"
                     alt="Signature du client"
                     style="max-width: 240px; background: #ffffff; border-radius: 8px;"
                   />`

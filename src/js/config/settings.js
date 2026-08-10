@@ -39,6 +39,11 @@ export const getSettings = () => {
     settings.platformName = DEFAULT_SETTINGS.platformName;
     settings.platformUrl = DEFAULT_SETTINGS.platformUrl;
   }
+  // Ce lien est rendu tel quel dans un href : seul https est acceptable,
+  // une sauvegarde restaurée ne doit pas pouvoir y glisser javascript:.
+  if (!/^https:\/\//i.test(String(settings.platformUrl ?? ''))) {
+    settings.platformUrl = DEFAULT_SETTINGS.platformUrl;
+  }
   return settings;
 };
 

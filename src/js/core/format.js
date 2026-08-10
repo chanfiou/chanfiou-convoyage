@@ -36,14 +36,18 @@ export const formatPercent = (ratio) => `${Math.round(ratio * 100)} %`;
 
 export const formatDistance = (kilometers) => `${Math.round(kilometers)} km`;
 
+// Une date invalide (donnée synchronisée corrompue ou forgée) ne doit jamais
+// faire lever le formateur, sinon l'écran entier ne se construit plus.
 export const formatDate = (isoDate) => {
   if (!isoDate) return '—';
-  return DATE_FORMATTER.format(new Date(isoDate));
+  const date = new Date(isoDate);
+  return Number.isNaN(date.getTime()) ? '—' : DATE_FORMATTER.format(date);
 };
 
 export const formatDateTime = (isoDate) => {
   if (!isoDate) return '—';
-  return DATE_TIME_FORMATTER.format(new Date(isoDate));
+  const date = new Date(isoDate);
+  return Number.isNaN(date.getTime()) ? '—' : DATE_TIME_FORMATTER.format(date);
 };
 
 export const formatDuration = (kilometers) => {

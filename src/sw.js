@@ -4,7 +4,7 @@ const PRECACHED_ASSETS = [
   './',
   './styles/app.css',
   './app.js',
-  './assets/fonts/archivo-brand.woff2',
+  './assets/fonts/montserrat.woff2',
   './manifest.webmanifest',
   './assets/icon-192.png',
   './assets/icon-512.png',

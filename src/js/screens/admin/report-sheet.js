@@ -62,7 +62,7 @@ export const openReportSheet = (mission, stage, onSaved) => {
             type="number"
             min="0"
             inputmode="numeric"
-            value="${existing?.mileage ?? ''}"
+            value="${escapeHtml(existing?.mileage ?? '')}"
           />
         </div>
         <div class="field">
@@ -121,7 +121,7 @@ export const openReportSheet = (mission, stage, onSaved) => {
       .map(
         (source, index) => html`
           <div class="photo-grid__item">
-            <img src="${source}" alt="Photo ${index + 1} du véhicule" />
+            <img src="${escapeHtml(source)}" alt="Photo ${index + 1} du véhicule" />
             <button type="button" class="photo-grid__remove" data-remove-photo="${index}" aria-label="Retirer la photo ${index + 1}">
               ${icon('close', 16)}
             </button>

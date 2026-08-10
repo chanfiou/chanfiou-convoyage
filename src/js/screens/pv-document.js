@@ -63,7 +63,7 @@ export const pvMarkup = (mission, stage) => {
                   .map(
                     (entry, index) => html`
                       <div class="photo-grid__item">
-                        <img src="${photoSource(entry)}" alt="Photo ${index + 1} du véhicule" />
+                        <img src="${escapeHtml(photoSource(entry))}" alt="Photo ${index + 1} du véhicule" />
                       </div>
                     `,
                   )
@@ -76,7 +76,7 @@ export const pvMarkup = (mission, stage) => {
       <section class="invoice-document__section">
         <h3>Signature</h3>
         ${report.signature
-          ? html`<img src="${report.signature}" alt="Signature" style="max-width: 240px; background: #ffffff; border-radius: 8px;" />`
+          ? html`<img src="${escapeHtml(report.signature)}" alt="Signature" style="max-width: 240px; background: #ffffff; border-radius: 8px;" />`
           : html`<p>Signature non recueillie.</p>`}
         <p>${escapeHtml(report.signatoryName?.trim() || 'Signataire non précisé')}</p>
       </section>

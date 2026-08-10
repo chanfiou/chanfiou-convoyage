@@ -91,8 +91,8 @@ export const chainingPanelMarkup = (missions) => {
               <button
                 type="button"
                 class="button button--xs button--primary"
-                data-chain="${mission.id}"
-                data-chain-to="${best.candidate.id}"
+                data-chain="${escapeHtml(mission.id)}"
+                data-chain-to="${escapeHtml(best.candidate.id)}"
               >
                 Chaîner et recalculer le prix
               </button>

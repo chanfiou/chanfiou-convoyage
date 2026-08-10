@@ -18,6 +18,7 @@ import {
 import { servePhoto, uploadPhoto } from './photos.js';
 import { notifyPendingHolds } from './reminders.js';
 import { readBackup, writeBackup } from './backup.js';
+import { clearRateLimit, isRateLimited } from './throttle.js';
 
 const SESSION_DURATION_SECONDS = 60 * 60 * 24 * 30;
 const MAX_PAYLOAD_BYTES = 512 * 1024;
@@ -70,13 +71,17 @@ const corsHeaders = (request, env) => {
   const allowed = String(env.ALLOWED_ORIGIN ?? '*');
   const origin = request.headers.get('origin') ?? '';
   const value = allowed === '*' ? '*' : allowed.split(',').map((entry) => entry.trim()).includes(origin) ? origin : '';
-  return {
-    'access-control-allow-origin': value || 'null',
+  const headers = {
     'access-control-allow-headers': 'content-type, authorization',
     'access-control-allow-methods': 'GET, POST, PATCH, DELETE, OPTIONS',
     'access-control-max-age': '86400',
+    'x-content-type-options': 'nosniff',
     vary: 'origin',
   };
+  // Origine non autorisée : on n'émet pas l'en-tête plutôt que « null »,
+  // valeur qu'un document sandboxé pourrait revendiquer comme origine.
+  if (value) headers['access-control-allow-origin'] = value;
+  return headers;
 };
 
 const readJson = async (request) => {
@@ -91,6 +96,9 @@ const readJson = async (request) => {
 };
 
 const operatorFrom = async (request, env) => {
+  // Sans secret configuré, aucune session ne peut être valide : mieux vaut
+  // tout refuser que de vérifier des signatures dérivées d'une clé vide.
+  if (!env.SESSION_SECRET) return null;
   const header = request.headers.get('authorization') ?? '';
   if (!header.toLowerCase().startsWith('bearer ')) return null;
   try {
@@ -132,6 +140,12 @@ const publicView = (mission) =>
   );
 
 const createRequest = async (request, env, ctx) => {
+  // Vingt demandes par heure et par adresse : large pour un client réel,
+  // bloquant pour un script qui inonderait la base et les notifications.
+  if (await isRateLimited(env, 'demande', request, 20, 60 * 60)) {
+    return fail(429, 'Trop de demandes envoyées. Réessayez dans une heure.');
+  }
+
   const { body, error } = await readJson(request);
   if (error) return fail(400, error);
 
@@ -242,6 +256,16 @@ const signContract = async (request, env, ctx) => {
 };
 
 const openSession = async (request, env) => {
+  if (!env.SESSION_SECRET || !env.OPERATOR_PASSWORD_HASH) {
+    return fail(503, 'La connexion n’est pas configurée sur le serveur.');
+  }
+
+  // Dix tentatives par quart d'heure et par adresse : de quoi se tromper
+  // de mot de passe, pas de quoi le deviner.
+  if (await isRateLimited(env, 'session', request, 10, 15 * 60)) {
+    return fail(429, 'Trop de tentatives. Réessayez dans un quart d’heure.');
+  }
+
   const { body, error } = await readJson(request);
   if (error) return fail(400, error);
 
@@ -256,6 +280,7 @@ const openSession = async (request, env) => {
     return fail(401, 'Adresse ou mot de passe incorrect.');
   }
 
+  await clearRateLimit(env, 'session', request);
   const expiresAt = Math.floor(Date.now() / 1000) + SESSION_DURATION_SECONDS;
   const token = await signSession({ sub: expected, exp: expiresAt }, env.SESSION_SECRET);
   return json({ token, expiresAt });
@@ -263,7 +288,9 @@ const openSession = async (request, env) => {
 
 const listMissions = async (request, env, url) => {
   const since = url.searchParams.get('since');
-  const limit = Math.min(MAX_PAGE_SIZE, Number(url.searchParams.get('limit')) || MAX_PAGE_SIZE);
+  // Borne basse comprise : en SQLite, un LIMIT négatif signifie « sans limite ».
+  const requested = Math.floor(Number(url.searchParams.get('limit')));
+  const limit = Number.isFinite(requested) && requested > 0 ? Math.min(MAX_PAGE_SIZE, requested) : MAX_PAGE_SIZE;
   const statement = since
     ? env.DB.prepare('SELECT * FROM missions WHERE updated_at > ?1 ORDER BY updated_at ASC LIMIT ?2').bind(since, limit)
     : env.DB.prepare('SELECT * FROM missions ORDER BY updated_at ASC LIMIT ?1').bind(limit);

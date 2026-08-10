@@ -50,7 +50,7 @@ const findOrCreateOrganization = async (env, buyer) => {
     `/organizations?page=1&limit=20&search=${encodeURIComponent(name)}`,
   );
   const existing = (search.docs ?? []).find(
-    (organization) => organization.name.trim().toLowerCase() === name.toLowerCase(),
+    (organization) => String(organization.name ?? '').trim().toLowerCase() === name.toLowerCase(),
   );
   if (existing) return existing;
 

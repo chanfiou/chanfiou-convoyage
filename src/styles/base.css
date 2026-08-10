@@ -20,7 +20,7 @@ body {
     radial-gradient(720px 420px at 50% -140px, rgba(255, 122, 26, 0.14), transparent 70%),
     url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><path d='M-30 250 L250 -30' stroke='%23ff7a1a' stroke-opacity='0.055' stroke-width='2' stroke-dasharray='14 18' fill='none'/><path d='M-30 140 L140 -30' stroke='%23eaf0f6' stroke-opacity='0.03' stroke-width='2' stroke-dasharray='10 22' fill='none'/></svg>");
   color: var(--color-text);
-  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-family: 'Montserrat', 'Segoe UI', system-ui, -apple-system, sans-serif;
   font-size: var(--font-body);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
@@ -127,7 +127,6 @@ body {
 
 .splash__name {
   font-family: var(--font-brand);
-  font-variation-settings: 'wdth' 118;
   font-size: 40px;
   font-weight: 800;
   text-transform: uppercase;

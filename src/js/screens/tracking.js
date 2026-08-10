@@ -28,7 +28,7 @@ const contractSignatureCardMarkup = (mission) => html`
       Votre convoyage est confirmé. Relisez le contrat, signez-le dans le cadre ci-dessous : votre
       facture est émise dès la signature.
     </p>
-    <button type="button" class="button button--s button--stroke" data-doc="contract" data-doc-mission="${mission.id}">
+    <button type="button" class="button button--s button--stroke" data-doc="contract" data-doc-mission="${escapeHtml(mission.id)}">
       Lire le contrat de convoyage
     </button>
     <div class="field">
@@ -43,7 +43,7 @@ const contractSignatureCardMarkup = (mission) => html`
       </button>
     </div>
     <p class="field__error" data-contract-error hidden></p>
-    <button type="button" class="button button--m button--primary" data-sign-contract="${mission.id}">
+    <button type="button" class="button button--m button--primary" data-sign-contract="${escapeHtml(mission.id)}">
       ${icon('check', 24)} Signer le contrat
     </button>
   </div>
@@ -51,22 +51,22 @@ const contractSignatureCardMarkup = (mission) => html`
 
 const stepDocumentMarkup = (mission, statusId) => {
   if (statusId === 'confirmee' && mission.termsAcceptedAt && mission.status !== 'demande') {
-    return html`<button type="button" class="button button--xs button--stroke" data-doc="contract" data-doc-mission="${mission.id}">
+    return html`<button type="button" class="button button--xs button--stroke" data-doc="contract" data-doc-mission="${escapeHtml(mission.id)}">
       ${icon('receipt', 16)} ${mission.contractSignedAt ? 'Contrat signé' : 'Voir le contrat de convoyage'}
     </button>`;
   }
   if (statusId === 'facturee' && mission.invoice) {
-    return html`<button type="button" class="button button--xs button--stroke" data-doc="invoice" data-doc-mission="${mission.id}">
+    return html`<button type="button" class="button button--xs button--stroke" data-doc="invoice" data-doc-mission="${escapeHtml(mission.id)}">
       ${icon('receipt', 16)} Facture ${escapeHtml(mission.invoice.number ?? '')}
     </button>`;
   }
   if (statusId === 'etat-des-lieux' && mission.departureReport) {
-    return html`<button type="button" class="button button--xs button--stroke" data-doc="departure" data-doc-mission="${mission.id}">
+    return html`<button type="button" class="button button--xs button--stroke" data-doc="departure" data-doc-mission="${escapeHtml(mission.id)}">
       ${icon('camera', 16)} État des lieux signé
     </button>`;
   }
   if (statusId === 'livree' && mission.arrivalReport) {
-    return html`<button type="button" class="button button--xs button--stroke" data-doc="arrival" data-doc-mission="${mission.id}">
+    return html`<button type="button" class="button button--xs button--stroke" data-doc="arrival" data-doc-mission="${escapeHtml(mission.id)}">
       ${icon('camera', 16)} PV de livraison signé
     </button>`;
   }
@@ -121,7 +121,7 @@ const paymentCardMarkup = (mission) => html`
       <span>${formatEuro(mission.invoice?.totals?.duePayable ?? mission.quote.totalIncludingVat)}</span>
     </div>
     ${mission.invoice
-      ? html`<button type="button" class="button button--s button--stroke" data-doc="invoice" data-doc-mission="${mission.id}">
+      ? html`<button type="button" class="button button--s button--stroke" data-doc="invoice" data-doc-mission="${escapeHtml(mission.id)}">
           ${icon('download', 20)} Facture ${escapeHtml(mission.invoice.number ?? '')} en PDF
         </button>`
       : html`<p class="text-small text-muted">Votre facture arrive dans les instants qui suivent.</p>`}
@@ -171,10 +171,10 @@ const missionCard = (mission) => {
         : ''}
       ${mission.trackingToken && isConfigured() && !['livree', 'annulee'].includes(mission.status)
         ? html`
-            <button type="button" class="button button--s button--stroke" data-notify="${mission.id}">
+            <button type="button" class="button button--s button--stroke" data-notify="${escapeHtml(mission.id)}">
               ${icon('inbox', 20)} M’alerter à chaque étape
             </button>
-            <p class="text-small text-muted" data-notify-state="${mission.id}" hidden></p>
+            <p class="text-small text-muted" data-notify-state="${escapeHtml(mission.id)}" hidden></p>
           `
         : ''}
       ${mission.trackingToken
@@ -185,7 +185,7 @@ const missionCard = (mission) => {
               et à la signature, depuis n’importe quel téléphone ou ordinateur.
             </p>
             <div class="row row--wrap">
-              <button type="button" class="button button--xs button--stroke" data-copy-link="${mission.id}">
+              <button type="button" class="button button--xs button--stroke" data-copy-link="${escapeHtml(mission.id)}">
                 Copier mon lien de suivi
               </button>
               <a

@@ -10,7 +10,7 @@ const DIST = path.join(ROOT, 'dist');
 
 const STYLE_FILES = ['tokens.css', 'base.css', 'fonts.css', 'components.css', 'invoice.css'];
 
-const BRAND_FONT = 'assets/fonts/archivo-brand.woff2';
+const BRAND_FONT = 'assets/fonts/montserrat.woff2';
 const FONT_PLACEHOLDER = '__BRAND_FONT_SRC__';
 
 const ENTRY_SCRIPT = `
@@ -62,8 +62,37 @@ const run = async () => {
     .replace('<!--STYLES-->', '<link rel="stylesheet" href="styles/app.css" />')
     .replace('<!--SCRIPT-->', '<script src="app.js" defer></script>');
 
+  // En-têtes de sécurité servis par Cloudflare Pages. Le script embarqué de
+  // détection du mode installé est autorisé par son empreinte, recalculée ici
+  // pour rester juste s'il change.
+  const inlineBootScript = template.match(/<script>([\s\S]*?)<\/script>/)?.[1] ?? '';
+  const bootScriptHash = createHash('sha256').update(inlineBootScript, 'utf8').digest('base64');
+  const csp = [
+    "default-src 'self'",
+    `script-src 'self' 'sha256-${bootScriptHash}'`,
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob: https:",
+    "font-src 'self' data:",
+    // https: et non l'API seule : l'adresse du serveur reste configurable
+    // dans les réglages de l'application.
+    "connect-src 'self' https:",
+    "manifest-src 'self'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+    "object-src 'none'",
+  ].join('; ');
+  const securityHeaders = `/*
+  Content-Security-Policy: ${csp}
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
+`;
+
   await mkdir(path.join(DIST, 'styles'), { recursive: true });
   await writeFile(path.join(DIST, 'index.html'), hostedHtml, 'utf8');
+  await writeFile(path.join(DIST, '_headers'), securityHeaders, 'utf8');
   await writeFile(path.join(DIST, 'styles', 'app.css'), hostedStyles, 'utf8');
   await writeFile(path.join(DIST, 'app.js'), script, 'utf8');
   await cp(path.join(SRC, 'manifest.webmanifest'), path.join(DIST, 'manifest.webmanifest'));

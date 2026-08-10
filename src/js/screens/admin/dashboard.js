@@ -104,13 +104,13 @@ const missionRow = (mission) => {
         <span class="text-small text-muted">
           ${icon('calendar', 16)} Prise en charge ${formatDate(mission.pickupDate)}
         </span>
-        <span class="text-small text-muted">${mission.quote.kilometers} km</span>
+        <span class="text-small text-muted">${escapeHtml(mission.quote.kilometers)} km</span>
       </div>
       ${mission.chainedToId
         ? html`<p class="text-small text-accent">
             ${icon('route', 16)} Chaînée après ${escapeHtml(mission.chainedToReference ?? '')} —
-            approche réduite à ${mission.quote.approachKilometers} km
-            <button type="button" class="button button--xs button--link" data-unchain="${mission.id}">
+            approche réduite à ${escapeHtml(mission.quote.approachKilometers)} km
+            <button type="button" class="button button--xs button--link" data-unchain="${escapeHtml(mission.id)}">
               Annuler le chaînage
             </button>
           </p>`
@@ -127,18 +127,18 @@ const missionRow = (mission) => {
         : ''}
       <div class="row row--wrap">
         ${status.next
-          ? html`<button type="button" class="button button--xs button--primary" data-advance="${mission.id}" data-next="${status.next}">
+          ? html`<button type="button" class="button button--xs button--primary" data-advance="${escapeHtml(mission.id)}" data-next="${status.next}">
               ${escapeHtml(statusById(status.next).label)}
             </button>`
           : ''}
-        <button type="button" class="button button--xs button--stroke" data-report="departure" data-mission="${mission.id}">
+        <button type="button" class="button button--xs button--stroke" data-report="departure" data-mission="${escapeHtml(mission.id)}">
           ${mission.departureReport ? 'Voir l’état des lieux' : 'État des lieux'}
         </button>
-        <button type="button" class="button button--xs button--stroke" data-report="arrival" data-mission="${mission.id}">
+        <button type="button" class="button button--xs button--stroke" data-report="arrival" data-mission="${escapeHtml(mission.id)}">
           ${mission.arrivalReport ? 'Voir le PV de livraison' : 'PV de livraison'}
         </button>
         ${mission.termsAcceptedAt && mission.status !== 'annulee'
-          ? html`<button type="button" class="button button--xs button--stroke" data-contract="${mission.id}">
+          ? html`<button type="button" class="button button--xs button--stroke" data-contract="${escapeHtml(mission.id)}">
               ${icon('receipt', 20)} Contrat
             </button>`
           : ''}
@@ -146,17 +146,17 @@ const missionRow = (mission) => {
           ${icon('phone', 20)} Appeler
         </a>
         ${['confirmee', 'facturee', 'payee', 'etat-des-lieux', 'en-cours', 'livree'].includes(mission.status)
-          ? html`<button type="button" class="button button--xs button--secondary" data-invoice="${mission.id}">
+          ? html`<button type="button" class="button button--xs button--secondary" data-invoice="${escapeHtml(mission.id)}">
               ${icon('receipt', 20)} ${invoiceForMission(mission.id) ? 'Voir la facture' : 'Facturer'}
             </button>`
           : ''}
         ${!['annulee', 'livree'].includes(mission.status)
-          ? html`<button type="button" class="button button--xs button--danger" data-cancel="${mission.id}">
+          ? html`<button type="button" class="button button--xs button--danger" data-cancel="${escapeHtml(mission.id)}">
               Annuler
             </button>`
           : ''}
         ${mission.status === 'annulee' && !invoiceForMission(mission.id)
-          ? html`<button type="button" class="button button--xs button--danger" data-delete="${mission.id}">
+          ? html`<button type="button" class="button button--xs button--danger" data-delete="${escapeHtml(mission.id)}">
               ${icon('close', 20)} Supprimer définitivement
             </button>`
           : ''}
@@ -205,7 +205,7 @@ const holdsPanelMarkup = (holds) => {
                         ${icon('calendar', 20)} Libérer la date
                       </button>`
                     : ''}
-                  <button type="button" class="button button--xs button--danger" data-cancel="${mission.id}">
+                  <button type="button" class="button button--xs button--danger" data-cancel="${escapeHtml(mission.id)}">
                     Annuler la mission
                   </button>
                 </div>

@@ -31,6 +31,12 @@ CREATE TABLE IF NOT EXISTS availability (
   PRIMARY KEY (day, reference)
 );
 
+CREATE TABLE IF NOT EXISTS throttle (
+  bucket TEXT PRIMARY KEY,
+  count INTEGER NOT NULL,
+  window_start TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS client_push (
   endpoint TEXT NOT NULL,
   reference TEXT NOT NULL,
