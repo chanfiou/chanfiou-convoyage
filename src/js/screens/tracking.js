@@ -6,7 +6,7 @@ import { contractMarkup, printContract } from './contract-document.js';
 import { printPv, pvMarkup, pvTitle } from './pv-document.js';
 import { getState, setState } from '../core/store.js';
 import { navigate, refresh } from '../core/router.js';
-import { MISSION_STATUSES, findMissionByReference, statusById } from '../domain/mission.js';
+import { MISSION_STATUSES, findMissionByReference, removeMission, statusById } from '../domain/mission.js';
 import { TOTAL_LABEL } from '../domain/vat.js';
 import {
   fetchTrackedMission,
@@ -177,14 +177,18 @@ const missionCard = (mission) => {
             <p class="text-small text-muted" data-notify-state="${escapeHtml(mission.id)}" hidden></p>
           `
         : ''}
+      <hr class="divider" />
       ${mission.trackingToken
         ? html`
-            <hr class="divider" />
             <p class="text-small text-muted">
               Conservez votre lien de suivi : il vous redonne accès à ce convoyage, à vos documents
               et à la signature, depuis n’importe quel téléphone ou ordinateur.
             </p>
-            <div class="row row--wrap">
+          `
+        : ''}
+      <div class="row row--wrap">
+        ${mission.trackingToken
+          ? html`
               <button type="button" class="button button--xs button--stroke" data-copy-link="${escapeHtml(mission.id)}">
                 Copier mon lien de suivi
               </button>
@@ -194,9 +198,12 @@ const missionCard = (mission) => {
               >
                 ${icon('mail', 16)} Me l’envoyer par mail
               </a>
-            </div>
-          `
-        : ''}
+            `
+          : ''}
+        <button type="button" class="button button--xs button--link" data-forget="${escapeHtml(mission.id)}">
+          Retirer de cet appareil
+        </button>
+      </div>
     </article>
   `;
 };
@@ -373,6 +380,20 @@ export const renderTracking = (params) => {
     } catch {
       showToast('Copie impossible : notez votre référence et votre lien.', 'danger');
     }
+  });
+
+  // Retrait purement local : le convoyage continue côté serveur, le lien de
+  // suivi permet de le remettre sur l'appareil à tout moment.
+  onClick(view, '[data-forget]', (target) => {
+    const followed = (getState().missions ?? []).find((entry) => entry.id === target.dataset.forget);
+    if (!followed) return;
+    const confirmed = window.confirm(
+      `Retirer ${followed.reference} de cet appareil ? Le convoyage n’est pas annulé : votre lien de suivi permet de le retrouver à tout moment.`,
+    );
+    if (!confirmed) return;
+    removeMission(followed.id);
+    showToast(`${followed.reference} retirée de cet appareil.`);
+    refresh();
   });
 
   onClick(view, '[data-copy-iban]', async () => {
