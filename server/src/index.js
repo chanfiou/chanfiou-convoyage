@@ -17,10 +17,14 @@ import {
 } from './availability.js';
 import { servePhoto, uploadPhoto } from './photos.js';
 import { notifyPendingHolds } from './reminders.js';
-import { readBackup, writeBackup } from './backup.js';
-import { clearRateLimit, isRateLimited } from './throttle.js';
+import { purgeOldBackups, readBackup, writeBackup } from './backup.js';
+import { clearRateLimit, isRateLimited, purgeExpiredThrottle } from './throttle.js';
 
 const SESSION_DURATION_SECONDS = 60 * 60 * 24 * 30;
+
+// Mêmes formats que les photos de PV : le pad de signature produit du PNG,
+// et un SVG (potentiellement actif) n'a rien à faire dans une signature.
+export const SIGNATURE_PATTERN = /^data:image\/(png|jpeg|webp);base64,/;
 const MAX_PAYLOAD_BYTES = 512 * 1024;
 const MAX_PAGE_SIZE = 200;
 
@@ -111,13 +115,13 @@ const operatorFrom = async (request, env) => {
 const nextReference = async (env, createdAt) => {
   const date = new Date(createdAt);
   const period = `${String(date.getUTCFullYear()).slice(-2)}${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
-  await env.DB.prepare(
+  // RETURNING rend l'incrément et la lecture atomiques : deux demandes
+  // simultanées ne peuvent pas tirer la même référence.
+  const row = await env.DB.prepare(
     'INSERT INTO counters (period, last_sequence) VALUES (?1, 1) ' +
-      'ON CONFLICT(period) DO UPDATE SET last_sequence = last_sequence + 1',
+      'ON CONFLICT(period) DO UPDATE SET last_sequence = last_sequence + 1 ' +
+      'RETURNING last_sequence',
   )
-    .bind(period)
-    .run();
-  const row = await env.DB.prepare('SELECT last_sequence FROM counters WHERE period = ?1')
     .bind(period)
     .first();
   return `CHF-${period}-${String(row.last_sequence).padStart(3, '0')}`;
@@ -215,7 +219,7 @@ const signContract = async (request, env, ctx) => {
   const reference = String(body?.reference ?? '').trim();
   const signature = String(body?.signature ?? '');
   const signatoryName = String(body?.signatoryName ?? '').trim();
-  if (!reference || !signature.startsWith('data:image/') || !signatoryName) {
+  if (!reference || !SIGNATURE_PATTERN.test(signature) || !signatoryName) {
     return fail(422, 'Signature ou nom du signataire manquant.');
   }
 
@@ -465,10 +469,17 @@ export default {
     }
   },
 
-  // Déclencheur quotidien : alerte sur les dates réservées non honorées.
+  // Déclencheur quotidien : alerte sur les dates réservées non honorées,
+  // puis ménage (compteurs de débit expirés, sauvegardes datées trop vieilles).
   async scheduled(event, env, ctx) {
     ctx.waitUntil(
       notifyPendingHolds(env).catch((cause) => console.error('relances quotidiennes', cause)),
+    );
+    ctx.waitUntil(
+      purgeExpiredThrottle(env).catch((cause) => console.error('purge des compteurs de débit', cause)),
+    );
+    ctx.waitUntil(
+      purgeOldBackups(env).catch((cause) => console.error('purge des sauvegardes datées', cause)),
     );
   },
 };
