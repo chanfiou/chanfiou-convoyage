@@ -35,21 +35,6 @@ export const isRateLimited = async (env, scope, request, maxAttempts, windowSeco
   }
 };
 
-// Fenêtre la plus longue utilisée (demandes : une heure) avec de la marge :
-// au-delà, une ligne ne peut plus influencer aucune limite.
-const STALE_AFTER_SECONDS = 24 * 3600;
-
-// Ménage quotidien : les compteurs sont écrasés bucket par bucket à la
-// prochaine visite, mais les adresses qui ne reviennent jamais resteraient
-// en base pour toujours sans cette purge.
-export const purgeExpiredThrottle = async (env, now = new Date()) => {
-  const cutoff = new Date(now.getTime() - STALE_AFTER_SECONDS * 1000).toISOString();
-  const { meta } = await env.DB.prepare('DELETE FROM throttle WHERE window_start < ?1')
-    .bind(cutoff)
-    .run();
-  return { purged: meta?.changes ?? 0 };
-};
-
 // Une connexion réussie remet le compteur à zéro : l'opérateur qui se trompe
 // deux fois puis réussit ne reste pas pénalisé.
 export const clearRateLimit = async (env, scope, request) => {
