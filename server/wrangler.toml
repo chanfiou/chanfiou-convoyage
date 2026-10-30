@@ -21,4 +21,4 @@ bucket_name = "chanfiou-photos"
 crons = ["0 7 * * *"]
 
 [vars]
-ALLOWED_ORIGIN = "https://chanfiou-convoyage.fr,https://convoyeur.chanfiou-convoyage.fr,https://www.chanfiou-convoyage.fr,https://chanfiou-convoyage.pages.dev"
+ALLOWED_ORIGIN = "https://chanfiou-convoyage.fr,https://convoyeur.chanfiou-convoyage.fr,https://www.chanfiou-convoyage.fr,https://chanfiou-convoyage.pages.dev,http://convoyeur.localhost:4173"

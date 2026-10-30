@@ -46,6 +46,7 @@ const request = async (path, { method = 'GET', body, authenticated = false } = {
     if (!response.ok) return { error: data.error ?? `Le serveur a répondu ${response.status}.`, status: response.status, data };
     return { data };
   } catch (cause) {
+    console.error('ERREUR REQUEST:', cause.name, cause.message, cause);
     if (cause.name === 'AbortError') {
       return { error: 'Le serveur ne répond pas. Vos données restent enregistrées sur cet appareil.', offline: true };
     }

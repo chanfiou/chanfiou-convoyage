@@ -4,3 +4,4 @@ server/.dev.vars
 server/.wrangler
 server/secrets-*.json
 *.sql.backup
+src/.wrangler

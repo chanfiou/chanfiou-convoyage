@@ -37,6 +37,17 @@ export const writeBackup = async (request, env) => {
   return json({ savedAt, counts: backup.counts ?? null });
 };
 
+const RETENTION_DAYS = 30;
+export const purgeOldBackups = async (env, now = new Date()) => {
+    if (!env.PHOTOS) return { purged: 0 };
+    const cutoff = new Date(now.getTime() - RETENTION_DAYS*24*3600*1000).toISOString().slice(0,10);
+    const {objects} = await env.PHOTOS.list({prefix: 'backup/'});
+    const expired = (objects ?? []).map((object) => object.key).filter((key) => /^backup\/d{4}-\d{2}\-\d{2}\.json$/.test(key) && key.slice(7,17) < cutoff);
+    await Promise.all(expired.map((key) => env.PHOTOS.delete(key)));
+    return { purged : expired.length};
+    
+};
+
 export const readBackup = async (env) => {
   if (!env.PHOTOS) return fail(503, 'Le stockage des sauvegardes n’est pas configuré.');
   const object = await env.PHOTOS.get(LATEST_KEY);

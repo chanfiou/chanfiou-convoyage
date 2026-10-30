@@ -35,6 +35,12 @@ export const isRateLimited = async (env, scope, request, maxAttempts, windowSeco
   }
 };
 
+const STALE_AFTER_SECONDS = 24 * 3600
+export const purgeExpiredThrottle = async (env, now = new Date()) => {
+    const cutoff = new Date(now.getTime() - STALE_AFTER_SECONDS * 1000).toISOString();
+    const { meta } = await env.DB.prepare('DELETE FROM throttle WHERE windows_start < ?1').bind(cutoff).run();
+    return { purged : meta?.changes ?? 0};
+};
 // Une connexion réussie remet le compteur à zéro : l'opérateur qui se trompe
 // deux fois puis réussit ne reste pas pénalisé.
 export const clearRateLimit = async (env, scope, request) => {
