@@ -36,10 +36,10 @@ const fakeBucket = (keys) => {
 test('la purge des sauvegardes supprime les copies datées de plus de trente jours', async () => {
   const bucket = fakeBucket([
     'backup/dernier.json',
-    'backup/2026-08-10.json',
+    'backup/2026-11-10.json',
     'backup/2026-07-12.json', // pile trente jours : encore conservée
     'backup/2026-07-11.json', // trente et un jours : purgée
-    'backup/2026-05-01.json',
+    'backup/2026-11-01.json',
   ]);
   const { purged } = await purgeOldBackups({ PHOTOS: bucket }, NOW);
   assert.equal(purged, 2);
