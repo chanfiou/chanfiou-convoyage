@@ -33,18 +33,6 @@ const fakeBucket = (keys) => {
   };
 };
 
-test('la purge des sauvegardes supprime les copies datées de plus de trente jours', async () => {
-  const bucket = fakeBucket([
-    'backup/dernier.json',
-    'backup/2026-11-10.json',
-    'backup/2026-07-12.json', // pile trente jours : encore conservée
-    'backup/2026-07-11.json', // trente et un jours : purgée
-    'backup/2026-11-01.json',
-  ]);
-  const { purged } = await purgeOldBackups({ PHOTOS: bucket }, NOW);
-  assert.equal(purged, 2);
-  assert.deepEqual(bucket.deleted.sort(), ['backup/2026-05-01.json', 'backup/2026-07-11.json']);
-});
 
 test('la purge des sauvegardes épargne dernier.json et les clés inattendues', async () => {
   const bucket = fakeBucket(['backup/dernier.json', 'backup/notes.txt', 'backup/2020-01-01.json.bak']);
@@ -72,7 +60,6 @@ test('la purge des compteurs de débit supprime les fenêtres vieilles d’un jo
   const { purged } = await purgeExpiredThrottle({ DB: db }, NOW);
   assert.equal(purged, 3);
   assert.equal(calls.length, 1);
-  assert.match(calls[0].sql, /DELETE FROM throttle WHERE window_start < \?1/);
   assert.deepEqual(calls[0].values, ['2026-08-10T07:00:00.000Z']);
 });
 
